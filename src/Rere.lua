@@ -12195,6 +12195,9 @@ sources[nodes['widgets/Tree']] = function(script)
     local Types = require(script.Parent.Parent.Types)
     
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
+        local TweenService = game:GetService("TweenService")
+        local OpenTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
         local abstractTree = {
             hasState = true,
             hasChildren = true,
@@ -12241,6 +12244,11 @@ sources[nodes['widgets/Tree']] = function(script)
                     thisWidget.lastCollapsedTick = Iris._cycleTick + 1
                 end
     
+                if isUncollapsed and not ChildContainer.Visible then
+                    local OpenScale = ChildContainer.OpenScale :: UIScale
+                    OpenScale.Scale = 0.96
+                    TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1 }):Play()
+                end
                 ChildContainer.Visible = isUncollapsed
             end,
             GenerateState = function(thisWidget: Types.CollapsingHeader)
@@ -12282,6 +12290,10 @@ sources[nodes['widgets/Tree']] = function(script)
     
                     widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
                     widgets.UIPadding(ChildContainer, Vector2.zero).PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y)
+    
+                    local OpenScale = Instance.new("UIScale")
+                    OpenScale.Name = "OpenScale"
+                    OpenScale.Parent = ChildContainer
     
                     ChildContainer.Parent = Tree
     
@@ -12400,6 +12412,10 @@ sources[nodes['widgets/Tree']] = function(script)
     
                     widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
                     widgets.UIPadding(ChildContainer, Vector2.zero).PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y)
+    
+                    local OpenScale = Instance.new("UIScale")
+                    OpenScale.Name = "OpenScale"
+                    OpenScale.Parent = ChildContainer
     
                     ChildContainer.Parent = CollapsingHeader
     
