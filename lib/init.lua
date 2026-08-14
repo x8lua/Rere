@@ -24,6 +24,10 @@ local Iris = {} :: Types.Iris
 
 local Internal: Types.Internal = require(script.Internal)(Iris)
 
+Iris.Version = "0.1.16"
+function Iris:GetVersion(): string
+    return self.Version
+end
 local function resolveExecutorParent(): BasePlayerGui | GuiBase2d
     for _, getContainer in {
         function()

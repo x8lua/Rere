@@ -509,6 +509,8 @@ export type Config = {
 type WidgetCall<W, A, S, E...> = (arguments: A, states: S, E...) -> W
 
 export type Iris = {
+    Version: string,
+    GetVersion: (self: Iris) -> string,
     --[[
         -----------
           WIDGETS

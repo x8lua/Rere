@@ -6,7 +6,7 @@ Rere is an executor-compatible distribution of [Iris](https://github.com/SirMall
 
 ```lua
 local compiler = loadstring or load
-local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.15/src/Rere.lua")
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.16/src/Rere.lua")
 local Rere = assert(compiler(source))()
 Rere.Init()
 ```
