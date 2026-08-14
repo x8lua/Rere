@@ -4501,7 +4501,7 @@ sources[nodes['config']] = function(script)
             SeparatorTextPadding = Vector2.new(20, 3),
             IndentSpacing = 21,
     
-            TextFont = Font.fromEnum(Enum.Font.Code),
+            TextFont = Font.fromName("Inconsolata"),
             TextSize = 13,
             FrameBorderSize = 0,
             FrameRounding = 0,
@@ -7477,6 +7477,8 @@ sources[nodes['widgets/Combo']] = function(script)
     local Types = require(script.Parent.Parent.Types)
     
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
+        local TweenService = game:GetService("TweenService")
+        local OpenTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         --stylua: ignore
         Iris.WidgetConstructor("Selectable", {
             hasState = true,
@@ -7867,6 +7869,11 @@ sources[nodes['widgets/Combo']] = function(script)
                 local ChildContainerUIListLayout = widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
                 ChildContainerUIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
     
+                local OpenScale = Instance.new("UIScale")
+                OpenScale.Name = "OpenScale"
+                OpenScale.Scale = 1.2
+                OpenScale.Parent = ChildContainer
+    
                 local RootPopupScreenGui = Iris._rootInstance and Iris._rootInstance:WaitForChild("PopupScreenGui") :: GuiObject
                 ChildContainer.Parent = RootPopupScreenGui
     
@@ -7933,6 +7940,11 @@ sources[nodes['widgets/Combo']] = function(script)
     
                     -- ImGui also does not do this, and the Arrow is always facing down
                     Dropdown.Image = widgets.ICONS.RIGHT_POINTING_TRIANGLE
+                    if not ChildContainer.Visible then
+                        local OpenScale = ChildContainer.OpenScale :: UIScale
+                        OpenScale.Scale = 1.15
+                        TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1.2 }):Play()
+                    end
                     ChildContainer.Visible = true
     
                     UpdateChildContainerTransform(thisWidget)
@@ -9555,6 +9567,8 @@ sources[nodes['widgets/Menu']] = function(script)
     local Types = require(script.Parent.Parent.Types)
     
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
+        local TweenService = game:GetService("TweenService")
+        local OpenTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         local AnyMenuOpen = false
         local ActiveMenu: Types.Menu? = nil
         local MenuStack: { Types.Menu } = {}
@@ -9841,6 +9855,11 @@ sources[nodes['widgets/Menu']] = function(script)
                 
                 widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, 1)).VerticalAlignment = Enum.VerticalAlignment.Top
     
+                local OpenScale = Instance.new("UIScale")
+                OpenScale.Name = "OpenScale"
+                OpenScale.Scale = 1.2
+                OpenScale.Parent = ChildContainer
+    
                 local RootPopupScreenGui = Iris._rootInstance and Iris._rootInstance:FindFirstChild("PopupScreenGui") :: GuiObject
                 ChildContainer.Parent = RootPopupScreenGui
                 
@@ -9876,6 +9895,11 @@ sources[nodes['widgets/Menu']] = function(script)
                 if thisWidget.state.isOpened.value then
                     thisWidget.lastOpenedTick = Iris._cycleTick + 1
                     thisWidget.ButtonColors.Transparency = Iris._config.HeaderTransparency
+                    if not ChildContainer.Visible then
+                        local OpenScale = ChildContainer.OpenScale :: UIScale
+                        OpenScale.Scale = 1.15
+                        TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1.2 }):Play()
+                    end
                     ChildContainer.Visible = true
     
                     UpdateChildContainerTransform(thisWidget)
@@ -11078,6 +11102,9 @@ sources[nodes['widgets/Tab']] = function(script)
     local Types = require(script.Parent.Parent.Types)
     
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
+        local TweenService = game:GetService("TweenService")
+        local OpenTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
         local function openTab(TabBar: Types.TabBar, Index: number)
             for i, tab in TabBar.Tabs do
                 tab.state.isOpened:set(i == Index)
@@ -11325,6 +11352,10 @@ sources[nodes['widgets/Tab']] = function(script)
                 widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
                 widgets.UIPadding(ChildContainer, Vector2.new(0, Iris._config.ItemSpacing.Y)).PaddingBottom = UDim.new()
     
+                local OpenScale = Instance.new("UIScale")
+                OpenScale.Name = "OpenScale"
+                OpenScale.Parent = ChildContainer
+    
                 thisWidget.ChildContainer = ChildContainer
     
                 return Tab
@@ -11355,6 +11386,11 @@ sources[nodes['widgets/Tab']] = function(script)
                     Tab.BackgroundColor3 = Iris._config.TabActiveColor
                     Tab.BackgroundTransparency = Iris._config.TabActiveTransparency
                     Container.Position = UDim2.fromOffset(0, 0)
+                    if not Container.Visible then
+                        local OpenScale = Container.OpenScale :: UIScale
+                        OpenScale.Scale = 0.96
+                        TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1 }):Play()
+                    end
                     Container.Visible = true
                     thisWidget.lastSelectedTick = Iris._cycleTick + 1
                 else
@@ -12868,6 +12904,11 @@ sources[nodes['widgets/Window']] = function(script)
                 WindowButton.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
     
                 widgets.UIStroke(WindowButton, Iris._config.WindowBorderSize, Iris._config.BorderColor, Iris._config.BorderTransparency)
+    
+                local InterfaceScale = Instance.new("UIScale")
+                InterfaceScale.Name = "InterfaceScale"
+                InterfaceScale.Scale = 1.2
+                InterfaceScale.Parent = WindowButton
     
                 WindowButton.Parent = Window
     

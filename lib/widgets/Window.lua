@@ -420,6 +420,11 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
             widgets.UIStroke(WindowButton, Iris._config.WindowBorderSize, Iris._config.BorderColor, Iris._config.BorderTransparency)
 
+            local InterfaceScale = Instance.new("UIScale")
+            InterfaceScale.Name = "InterfaceScale"
+            InterfaceScale.Scale = 1.2
+            InterfaceScale.Parent = WindowButton
+
             WindowButton.Parent = Window
 
             widgets.applyInputBegan(WindowButton, function(input)

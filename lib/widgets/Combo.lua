@@ -1,6 +1,8 @@
 local Types = require(script.Parent.Parent.Types)
 
 return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
+    local TweenService = game:GetService("TweenService")
+    local OpenTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     --stylua: ignore
     Iris.WidgetConstructor("Selectable", {
         hasState = true,
@@ -391,6 +393,11 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local ChildContainerUIListLayout = widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
             ChildContainerUIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
+            local OpenScale = Instance.new("UIScale")
+            OpenScale.Name = "OpenScale"
+            OpenScale.Scale = 1.2
+            OpenScale.Parent = ChildContainer
+
             local RootPopupScreenGui = Iris._rootInstance and Iris._rootInstance:WaitForChild("PopupScreenGui") :: GuiObject
             ChildContainer.Parent = RootPopupScreenGui
 
@@ -457,6 +464,11 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
                 -- ImGui also does not do this, and the Arrow is always facing down
                 Dropdown.Image = widgets.ICONS.RIGHT_POINTING_TRIANGLE
+                if not ChildContainer.Visible then
+                    local OpenScale = ChildContainer.OpenScale :: UIScale
+                    OpenScale.Scale = 1.15
+                    TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1.2 }):Play()
+                end
                 ChildContainer.Visible = true
 
                 UpdateChildContainerTransform(thisWidget)
