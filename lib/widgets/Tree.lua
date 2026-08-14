@@ -51,10 +51,23 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             end
 
             if isUncollapsed and not ChildContainer.Visible then
+                local Layout = ChildContainer.UIListLayout :: UIListLayout
                 local Padding = ChildContainer.UIPadding :: UIPadding
-                Padding.PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y - 8)
+                local TargetHeight = Layout.AbsoluteContentSize.Y + Padding.PaddingTop.Offset + Padding.PaddingBottom.Offset
+                ChildContainer.AutomaticSize = Enum.AutomaticSize.None
+                ChildContainer.Size = UDim2.new(1, 0, 0, 0)
                 ChildContainer.Visible = true
-                TweenService:Create(Padding, OpenTweenInfo, { PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y) }):Play()
+                local OpenTween = TweenService:Create(ChildContainer, OpenTweenInfo, { Size = UDim2.new(1, 0, 0, TargetHeight) })
+                OpenTween:Play()
+                OpenTween.Completed:Once(function()
+                    if ChildContainer.Parent and thisWidget.state.isUncollapsed.value then
+                        ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
+                        ChildContainer.Size = UDim2.fromScale(1, 0)
+                    end
+                end)
+            elseif not isUncollapsed then
+                ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
+                ChildContainer.Size = UDim2.fromScale(1, 0)
             end
             ChildContainer.Visible = isUncollapsed
         end,

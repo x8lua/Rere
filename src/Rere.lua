@@ -7945,9 +7945,9 @@ sources[nodes['widgets/Combo']] = function(script)
     
                     UpdateChildContainerTransform(thisWidget)
                     if ShouldAnimate then
-                        local TargetPosition = ChildContainer.Position
-                        ChildContainer.Position = TargetPosition - UDim2.fromOffset(0, 8)
-                        TweenService:Create(ChildContainer, OpenTweenInfo, { Position = TargetPosition }):Play()
+                        local TargetSize = ChildContainer.Size
+                        ChildContainer.Size = UDim2.new(TargetSize.X, UDim.new(0, 0))
+                        TweenService:Create(ChildContainer, OpenTweenInfo, { Size = TargetSize }):Play()
                     end
                 else
                     if AnyOpenedCombo then
@@ -9901,14 +9901,26 @@ sources[nodes['widgets/Menu']] = function(script)
     
                     UpdateChildContainerTransform(thisWidget)
                     if ShouldAnimate then
-                        local TargetPosition = ChildContainer.Position
-                        ChildContainer.Position = TargetPosition - UDim2.fromOffset(0, 8)
-                        TweenService:Create(ChildContainer, OpenTweenInfo, { Position = TargetPosition }):Play()
+                        local Layout = ChildContainer.UIListLayout :: UIListLayout
+                        local Padding = ChildContainer.UIPadding :: UIPadding
+                        local TargetHeight = Layout.AbsoluteContentSize.Y + Padding.PaddingTop.Offset + Padding.PaddingBottom.Offset
+                        local TargetWidth = ChildContainer.AbsoluteSize.X / 1.2
+                        ChildContainer.AutomaticSize = Enum.AutomaticSize.None
+                        ChildContainer.Size = UDim2.fromOffset(TargetWidth, 0)
+                        local OpenTween = TweenService:Create(ChildContainer, OpenTweenInfo, { Size = UDim2.fromOffset(TargetWidth, TargetHeight) })
+                        OpenTween:Play()
+                        OpenTween.Completed:Once(function()
+                            if ChildContainer.Parent and thisWidget.state.isOpened.value then
+                                ChildContainer.AutomaticSize = Enum.AutomaticSize.XY
+                                ChildContainer.Size = UDim2.fromOffset(TargetWidth, 0)
+                            end
+                        end)
                     end
                 else
                     thisWidget.lastClosedTick = Iris._cycleTick + 1
                     thisWidget.ButtonColors.Transparency = 1
                     ChildContainer.Visible = false
+                    ChildContainer.AutomaticSize = Enum.AutomaticSize.XY
                 end
             end,
             Discard = function(thisWidget: Types.Menu)
@@ -11385,10 +11397,20 @@ sources[nodes['widgets/Tab']] = function(script)
                     Tab.BackgroundTransparency = Iris._config.TabActiveTransparency
                     Container.Position = UDim2.fromOffset(0, 0)
                     if not Container.Visible then
+                        local Layout = Container.UIListLayout :: UIListLayout
                         local Padding = Container.UIPadding :: UIPadding
-                        Padding.PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y - 8)
+                        local TargetHeight = Layout.AbsoluteContentSize.Y + Padding.PaddingTop.Offset + Padding.PaddingBottom.Offset
+                        Container.AutomaticSize = Enum.AutomaticSize.None
+                        Container.Size = UDim2.new(1, 0, 0, 0)
                         Container.Visible = true
-                        TweenService:Create(Padding, OpenTweenInfo, { PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y) }):Play()
+                        local OpenTween = TweenService:Create(Container, OpenTweenInfo, { Size = UDim2.new(1, 0, 0, TargetHeight) })
+                        OpenTween:Play()
+                        OpenTween.Completed:Once(function()
+                            if Container.Parent and thisWidget.state.isOpened.value then
+                                Container.AutomaticSize = Enum.AutomaticSize.Y
+                                Container.Size = UDim2.fromScale(1, 0)
+                            end
+                        end)
                     end
                     Container.Visible = true
                     thisWidget.lastSelectedTick = Iris._cycleTick + 1
@@ -11398,6 +11420,8 @@ sources[nodes['widgets/Tab']] = function(script)
                     Tab.BackgroundColor3 = Iris._config.TabColor
                     Tab.BackgroundTransparency = Iris._config.TabTransparency
                     Container.Visible = false
+                    Container.AutomaticSize = Enum.AutomaticSize.Y
+                    Container.Size = UDim2.fromScale(1, 0)
                     thisWidget.lastUnselectedTick = Iris._cycleTick + 1
                 end
             end,
@@ -12244,10 +12268,23 @@ sources[nodes['widgets/Tree']] = function(script)
                 end
     
                 if isUncollapsed and not ChildContainer.Visible then
+                    local Layout = ChildContainer.UIListLayout :: UIListLayout
                     local Padding = ChildContainer.UIPadding :: UIPadding
-                    Padding.PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y - 8)
+                    local TargetHeight = Layout.AbsoluteContentSize.Y + Padding.PaddingTop.Offset + Padding.PaddingBottom.Offset
+                    ChildContainer.AutomaticSize = Enum.AutomaticSize.None
+                    ChildContainer.Size = UDim2.new(1, 0, 0, 0)
                     ChildContainer.Visible = true
-                    TweenService:Create(Padding, OpenTweenInfo, { PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y) }):Play()
+                    local OpenTween = TweenService:Create(ChildContainer, OpenTweenInfo, { Size = UDim2.new(1, 0, 0, TargetHeight) })
+                    OpenTween:Play()
+                    OpenTween.Completed:Once(function()
+                        if ChildContainer.Parent and thisWidget.state.isUncollapsed.value then
+                            ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
+                            ChildContainer.Size = UDim2.fromScale(1, 0)
+                        end
+                    end)
+                elseif not isUncollapsed then
+                    ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
+                    ChildContainer.Size = UDim2.fromScale(1, 0)
                 end
                 ChildContainer.Visible = isUncollapsed
             end,

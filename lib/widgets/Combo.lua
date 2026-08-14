@@ -469,9 +469,9 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
                 UpdateChildContainerTransform(thisWidget)
                 if ShouldAnimate then
-                    local TargetPosition = ChildContainer.Position
-                    ChildContainer.Position = TargetPosition - UDim2.fromOffset(0, 8)
-                    TweenService:Create(ChildContainer, OpenTweenInfo, { Position = TargetPosition }):Play()
+                    local TargetSize = ChildContainer.Size
+                    ChildContainer.Size = UDim2.new(TargetSize.X, UDim.new(0, 0))
+                    TweenService:Create(ChildContainer, OpenTweenInfo, { Size = TargetSize }):Play()
                 end
             else
                 if AnyOpenedCombo then

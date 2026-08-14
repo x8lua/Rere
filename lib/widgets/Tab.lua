@@ -282,10 +282,20 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 Tab.BackgroundTransparency = Iris._config.TabActiveTransparency
                 Container.Position = UDim2.fromOffset(0, 0)
                 if not Container.Visible then
+                    local Layout = Container.UIListLayout :: UIListLayout
                     local Padding = Container.UIPadding :: UIPadding
-                    Padding.PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y - 8)
+                    local TargetHeight = Layout.AbsoluteContentSize.Y + Padding.PaddingTop.Offset + Padding.PaddingBottom.Offset
+                    Container.AutomaticSize = Enum.AutomaticSize.None
+                    Container.Size = UDim2.new(1, 0, 0, 0)
                     Container.Visible = true
-                    TweenService:Create(Padding, OpenTweenInfo, { PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y) }):Play()
+                    local OpenTween = TweenService:Create(Container, OpenTweenInfo, { Size = UDim2.new(1, 0, 0, TargetHeight) })
+                    OpenTween:Play()
+                    OpenTween.Completed:Once(function()
+                        if Container.Parent and thisWidget.state.isOpened.value then
+                            Container.AutomaticSize = Enum.AutomaticSize.Y
+                            Container.Size = UDim2.fromScale(1, 0)
+                        end
+                    end)
                 end
                 Container.Visible = true
                 thisWidget.lastSelectedTick = Iris._cycleTick + 1
@@ -295,6 +305,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 Tab.BackgroundColor3 = Iris._config.TabColor
                 Tab.BackgroundTransparency = Iris._config.TabTransparency
                 Container.Visible = false
+                Container.AutomaticSize = Enum.AutomaticSize.Y
+                Container.Size = UDim2.fromScale(1, 0)
                 thisWidget.lastUnselectedTick = Iris._cycleTick + 1
             end
         end,

@@ -334,14 +334,26 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
                 UpdateChildContainerTransform(thisWidget)
                 if ShouldAnimate then
-                    local TargetPosition = ChildContainer.Position
-                    ChildContainer.Position = TargetPosition - UDim2.fromOffset(0, 8)
-                    TweenService:Create(ChildContainer, OpenTweenInfo, { Position = TargetPosition }):Play()
+                    local Layout = ChildContainer.UIListLayout :: UIListLayout
+                    local Padding = ChildContainer.UIPadding :: UIPadding
+                    local TargetHeight = Layout.AbsoluteContentSize.Y + Padding.PaddingTop.Offset + Padding.PaddingBottom.Offset
+                    local TargetWidth = ChildContainer.AbsoluteSize.X / 1.2
+                    ChildContainer.AutomaticSize = Enum.AutomaticSize.None
+                    ChildContainer.Size = UDim2.fromOffset(TargetWidth, 0)
+                    local OpenTween = TweenService:Create(ChildContainer, OpenTweenInfo, { Size = UDim2.fromOffset(TargetWidth, TargetHeight) })
+                    OpenTween:Play()
+                    OpenTween.Completed:Once(function()
+                        if ChildContainer.Parent and thisWidget.state.isOpened.value then
+                            ChildContainer.AutomaticSize = Enum.AutomaticSize.XY
+                            ChildContainer.Size = UDim2.fromOffset(TargetWidth, 0)
+                        end
+                    end)
                 end
             else
                 thisWidget.lastClosedTick = Iris._cycleTick + 1
                 thisWidget.ButtonColors.Transparency = 1
                 ChildContainer.Visible = false
+                ChildContainer.AutomaticSize = Enum.AutomaticSize.XY
             end
         end,
         Discard = function(thisWidget: Types.Menu)
