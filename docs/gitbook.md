@@ -11,6 +11,8 @@ local Rere = assert(compiler(source))()
 Rere.Init()
 ```
 
+`Rere.Init()` selects the executor hidden UI container through `gethui()` or `get_hidden_gui()` when available. It otherwise uses `CoreGui`, then `PlayerGui`.
+
 ## First Window
 
 ```lua

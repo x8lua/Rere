@@ -24,6 +24,35 @@ local Iris = {} :: Types.Iris
 
 local Internal: Types.Internal = require(script.Internal)(Iris)
 
+local function resolveExecutorParent(): BasePlayerGui | GuiBase2d
+    for _, getContainer in {
+        function()
+            if type(gethui) == "function" then
+                return gethui()
+            end
+        end,
+        function()
+            if type(get_hidden_gui) == "function" then
+                return get_hidden_gui()
+            end
+        end,
+    } do
+        local ok, container = pcall(getContainer)
+        if ok and typeof(container) == "Instance" then
+            return container
+        end
+    end
+
+    local ok, coreGui = pcall(function()
+        return game:GetService("CoreGui")
+    end)
+    if ok and coreGui then
+        return coreGui
+    end
+
+    return game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
+
 --[=[
     @within Iris
     @prop Disabled boolean
@@ -79,8 +108,7 @@ function Iris.Init(parentInstance: BasePlayerGui | GuiBase2d?, eventConnection: 
     end
 
     if parentInstance == nil then
-        -- coalesce to playerGui
-        parentInstance = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+        parentInstance = resolveExecutorParent()
     end
     if eventConnection == nil then
         -- coalesce to Heartbeat
