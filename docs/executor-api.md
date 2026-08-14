@@ -52,8 +52,7 @@ The complete script is in [`examples/slider.lua`](../examples/slider.lua).
 
 ## Settings Dropdown, Runtime Info, And Style
 
-[`examples/settings_demo.lua`](../examples/settings_demo.lua) includes a `MenuBar` dropdown with three page entries:
+[`examples/settings_demo.lua`](../examples/settings_demo.lua) uses a `Settings` `MenuBar` dropdown:
 
-- Settings with `SliderNum` and `DragNum` controls.
-- Runtime Info showing cycle, delta time, and registered widget count.
-- Style Editor entry reserved for the later page-switching implementation.
+- Settings shows `SliderNum` and `DragNum` controls.
+- Runtime Info and Style Editor are dropdown entries only; they do not switch pages yet.
