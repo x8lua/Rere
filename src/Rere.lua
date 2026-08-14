@@ -8889,7 +8889,7 @@ sources[nodes['widgets/Input']] = function(script)
                 DragIndicator.BorderSizePixel = 0
                 DragIndicator.ZIndex = 0
                 DragIndicator.Parent = DragField
-
+    
                 local OverlayText = Instance.new("TextLabel")
                 OverlayText.Name = "OverlayText"
                 OverlayText.Size = UDim2.fromScale(1, 1)
@@ -8897,12 +8897,11 @@ sources[nodes['widgets/Input']] = function(script)
                 OverlayText.BorderSizePixel = 0
                 OverlayText.ZIndex = 10
                 OverlayText.ClipsDescendants = true
-
+    
                 widgets.applyTextStyle(OverlayText)
-
                 OverlayText.TextXAlignment = Enum.TextXAlignment.Center
                 OverlayText.Parent = DragField
-
+    
                 local InputField = Instance.new("TextBox")
                 InputField.Name = "InputField"
                 InputField.Size = UDim2.fromScale(1, 1)
@@ -11135,7 +11134,7 @@ sources[nodes['widgets/Tab']] = function(script)
                 Underline.BorderSizePixel = 0
                 Underline.LayoutOrder = 1
                 Underline.Visible = false
-
+    
                 Underline.Parent = TabBar
     
                 local ChildContainer = Instance.new("Frame")
@@ -12940,9 +12939,7 @@ sources[nodes['widgets/Window']] = function(script)
                 ChildContainer.ClipsDescendants = true
     
                 local WindowPadding = widgets.UIPadding(ChildContainer, Iris._config.WindowPadding)
-                -- Let the first top-level TabBar sit directly under the title bar instead of
-                -- being pushed down by the window body padding. Non-tab content keeps its own
-                -- spacing through the normal item layout/padding rules.
+                -- Keep a top-level TabBar directly under the title bar.
                 WindowPadding.PaddingTop = UDim.new()
     
                 ChildContainer.Parent = Content

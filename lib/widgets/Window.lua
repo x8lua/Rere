@@ -468,7 +468,9 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             ChildContainer.LayoutOrder = thisWidget.ZIndex + 0xFFFF
             ChildContainer.ClipsDescendants = true
 
-            widgets.UIPadding(ChildContainer, Iris._config.WindowPadding)
+            local WindowPadding = widgets.UIPadding(ChildContainer, Iris._config.WindowPadding)
+            -- Keep a top-level TabBar directly under the title bar.
+            WindowPadding.PaddingTop = UDim.new()
 
             ChildContainer.Parent = Content
 

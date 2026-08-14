@@ -615,6 +615,18 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             DragIndicator.ZIndex = 0
             DragIndicator.Parent = DragField
 
+            local OverlayText = Instance.new("TextLabel")
+            OverlayText.Name = "OverlayText"
+            OverlayText.Size = UDim2.fromScale(1, 1)
+            OverlayText.BackgroundTransparency = 1
+            OverlayText.BorderSizePixel = 0
+            OverlayText.ZIndex = 10
+            OverlayText.ClipsDescendants = true
+
+            widgets.applyTextStyle(OverlayText)
+            OverlayText.TextXAlignment = Enum.TextXAlignment.Center
+            OverlayText.Parent = DragField
+
             local InputField = Instance.new("TextBox")
             InputField.Name = "InputField"
             InputField.Size = UDim2.fromScale(1, 1)
@@ -723,6 +735,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                         end
                         local DragField = Drag:FindFirstChild("DragField" .. tostring(index)) :: TextButton
                         local InputField: TextBox = DragField.InputField
+                        local OverlayText: TextLabel = DragField.OverlayText
                         local DragIndicator: Frame = DragField.DragIndicator
                         local value = getValueByIndex(state.value, index, thisWidget.arguments :: any)
                         if (dataType == "Color3" or dataType == "Color4") and not widget.arguments.UseFloats then
@@ -733,7 +746,9 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                         if thisWidget.arguments.Prefix then
                             format = thisWidget.arguments.Prefix[index] .. format
                         end
-                        DragField.Text = string.format(format, value)
+                        local displayText = string.format(format, value)
+                        DragField.Text = ""
+                        OverlayText.Text = displayText
                         InputField.Text = tostring(value)
 
                         local min = thisWidget.arguments.Min and getValueByIndex(thisWidget.arguments.Min, index, thisWidget.arguments :: any) or defaultMin[dataType][index]
@@ -745,10 +760,10 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                         if thisWidget.state.editingText.value == index then
                             InputField.Visible = true
                             InputField:CaptureFocus()
-                            DragField.TextTransparency = 1
+                            OverlayText.Visible = false
                         else
                             InputField.Visible = false
-                            DragField.TextTransparency = Iris._config.TextTransparency
+                            OverlayText.Visible = true
                         end
                     end
 
