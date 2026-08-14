@@ -12261,7 +12261,11 @@ sources[nodes['widgets/Tree']] = function(script)
                 local Arrow: ImageLabel = Button.Arrow
     
                 Arrow.Image = widgets.ICONS.RIGHT_POINTING_TRIANGLE
-                TweenService:Create(Arrow, OpenTweenInfo, { Rotation = isUncollapsed and 90 or 0 }):Play()
+                local TargetRotation = isUncollapsed and 90 or 0
+                if Arrow:GetAttribute("TargetRotation") ~= TargetRotation then
+                    Arrow:SetAttribute("TargetRotation", TargetRotation)
+                    TweenService:Create(Arrow, OpenTweenInfo, { Rotation = TargetRotation }):Play()
+                end
                 if isUncollapsed then
                     thisWidget.lastUncollapsedTick = Iris._cycleTick + 1
                 else
