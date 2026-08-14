@@ -1,27 +1,35 @@
-Changed branch/field: main / Iris Studio module loading converted to the executor bundle entrypoint src/Rere.lua.
+Changed branch/field: main / lib/widgets/Input.lua:updateActiveDrag numeric DragField cursor mapping.
+
+Paths:
+- lib/widgets/Input.lua
+- src/Rere.lua
+- artifacts/MODIFIED_FILE.lua
+- artifacts/DIFF_FILE.diff
+- artifacts/VERIFICATION.txt
+- artifacts/ROLLBACK.sh
 
 BASELINE
-Command: git show upstream/main:lib/init.lua
-Input: Iris source uses require(script.Types), require(script.Internal), and nested ModuleScripts.
-Literal output/result: Studio module-tree source is present.
+Command: $hash = (Get-FileHash lib/widgets/Input.lua -Algorithm SHA256).Hash; Write-Output "BASELINE_SHA256=$hash"; powershell -ExecutionPolicy Bypass -File tests/smoke.ps1
+Input: committed lib/widgets/Input.lua before the cursor-mapping change.
+Literal output/result:
+BASELINE_SHA256=96F6BB0F37624F71BD6EAE1FF2E75903E5D23B0E67CEE79DEF61CAD23203E151
+Rere executor bundle smoke test passed.
 Exit status: 0
 
 MODIFIED
-Command: node tools/build-executor.mjs; powershell -ExecutionPolicy Bypass -File tests/smoke.ps1
-Input: lib/**/*.lua
-Literal output/result: Rere executor bundle smoke test passed.
-Exit status: 0
-
-EXECUTOR
-Command: get-data-by-code loading https://raw.githubusercontent.com/x8lua/Rere/0ab9116/src/Rere.lua, then Rere.Init(nil, false)
-Input: immutable Rere bundle source
-Literal output/result: {true,"function",n=2}
+Command: node tools/build-executor.mjs; powershell -ExecutionPolicy Bypass -File tests/smoke.ps1; git diff --check -- lib/widgets/Input.lua
+Input: DragNum with Min, Max, Increment, and the cursor position within DragField1.
+Literal output/result:
+Rere executor bundle smoke test passed.
 Exit status: 0
 
 ROLLBACK
-Command: git show upstream/main:README.md > artifacts/ROLLBACK_COPY.md; compare SHA256 artifacts/BASELINE_FILE.md artifacts/ROLLBACK_COPY.md
-Input: upstream/main:README.md
-Literal output/result: rollback restored ROLLBACK_COPY.md from the Iris upstream baseline.
+Command: Copy-Item artifacts/MODIFIED_FILE.lua artifacts/ROLLBACK_COPY.lua -Force; & 'C:\Program Files\Git\bin\sh.exe' artifacts/ROLLBACK.sh artifacts/ROLLBACK_COPY.lua; Get-FileHash artifacts/ROLLBACK_COPY.lua,artifacts/BASELINE_FILE.lua -Algorithm SHA256
+Input: changed artifacts/MODIFIED_FILE.lua copied to artifacts/ROLLBACK_COPY.lua.
+Literal output/result:
+rollback restored artifacts/ROLLBACK_COPY.lua from BASELINE_FILE.lua
+ROLLBACK_SHA256=9CEE9865BE6AB93D8B684900C5B551CA16E75EAEACDF6960BCBCDE196FA1638A
+BASELINE_ARTIFACT_SHA256=9CEE9865BE6AB93D8B684900C5B551CA16E75EAEACDF6960BCBCDE196FA1638A
 Exit status: 0
 
-Restored behavior/status: ROLLBACK_COPY.md matches BASELINE_FILE.md while src/Rere.lua remains the executor-compatible bundle.
+Restored behavior/status: artifacts/ROLLBACK_COPY.lua exactly matches artifacts/BASELINE_FILE.lua; lib/widgets/Input.lua remains changed with numeric Drag controls following the cursor across their field.

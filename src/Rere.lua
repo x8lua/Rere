@@ -8772,16 +8772,13 @@ sources[nodes['widgets/Input']] = function(script)
         local generateDragScalar: <T>(dataType: InputDataTypes, components: number, defaultValue: T) -> Types.WidgetClass
         local generateColorDragScalar: (dataType: InputDataTypes, ...any) -> Types.WidgetClass
         do
-            local PreviouseMouseXPosition = 0
+            local PreviousMouseXPosition = 0
             local AnyActiveDrag = false
             local ActiveDrag: Types.Input<Types.InputDataType>? = nil
             local ActiveIndex = 0
             local ActiveDataType: InputDataTypes | "" = ""
     
             local function updateActiveDrag()
-                local currentMouseX = widgets.getMouseLocation().X
-                local mouseXDelta = currentMouseX - PreviouseMouseXPosition
-                PreviouseMouseXPosition = currentMouseX
                 if AnyActiveDrag == false then
                     return
                 end
@@ -8799,19 +8796,33 @@ sources[nodes['widgets/Input']] = function(script)
                 end
     
                 local increment = ActiveDrag.arguments.Increment and getValueByIndex(ActiveDrag.arguments.Increment, ActiveIndex, ActiveDrag.arguments :: any) or defaultIncrements[ActiveDataType][ActiveIndex]
-                increment *= (widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightShift)) and 10 or 1
-                increment *= (widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightAlt)) and 0.1 or 1
-                -- we increase the speed for Color3 and Color4 since it's too slow because the increment argument needs to be low.
-                increment *= (ActiveDataType == "Color3" or ActiveDataType == "Color4") and 5 or 1
+                local currentMouseX = widgets.getMouseLocation().X
+                local newValue: number
     
-                local value = getValueByIndex(state.value, ActiveIndex, ActiveDrag.arguments :: any)
-                local newValue = value + (mouseXDelta * increment)
+                if ActiveDataType == "Color3" or ActiveDataType == "Color4" then
+                    local mouseXDelta = currentMouseX - PreviousMouseXPosition
+                    PreviousMouseXPosition = currentMouseX
+                    increment *= (widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightShift)) and 10 or 1
+                    increment *= (widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightAlt)) and 0.1 or 1
     
-                if ActiveDrag.arguments.Min ~= nil then
-                    newValue = math.max(newValue, getValueByIndex(ActiveDrag.arguments.Min, ActiveIndex, ActiveDrag.arguments :: any))
-                end
-                if ActiveDrag.arguments.Max ~= nil then
-                    newValue = math.min(newValue, getValueByIndex(ActiveDrag.arguments.Max, ActiveIndex, ActiveDrag.arguments :: any))
+                    local value = getValueByIndex(state.value, ActiveIndex, ActiveDrag.arguments :: any)
+                    newValue = value + (mouseXDelta * increment * 5)
+    
+                    if ActiveDrag.arguments.Min ~= nil then
+                        newValue = math.max(newValue, getValueByIndex(ActiveDrag.arguments.Min, ActiveIndex, ActiveDrag.arguments :: any))
+                    end
+                    if ActiveDrag.arguments.Max ~= nil then
+                        newValue = math.min(newValue, getValueByIndex(ActiveDrag.arguments.Max, ActiveIndex, ActiveDrag.arguments :: any))
+                    end
+                else
+                    local Drag = ActiveDrag.Instance :: Frame
+                    local DragField = Drag:FindFirstChild("DragField" .. tostring(ActiveIndex)) :: TextButton
+                    local min = ActiveDrag.arguments.Min and getValueByIndex(ActiveDrag.arguments.Min, ActiveIndex, ActiveDrag.arguments :: any) or defaultMin[ActiveDataType][ActiveIndex]
+                    local max = ActiveDrag.arguments.Max and getValueByIndex(ActiveDrag.arguments.Max, ActiveIndex, ActiveDrag.arguments :: any) or defaultMax[ActiveDataType][ActiveIndex]
+                    local fieldX = DragField.AbsolutePosition.X - widgets.GuiOffset.X
+                    local ratio = math.clamp((currentMouseX - fieldX) / math.max(DragField.AbsoluteSize.X, 1), 0, 1)
+                    local positions = math.max(1, math.floor((max - min) / increment))
+                    newValue = math.clamp(math.round(ratio * positions) * increment + min, min, max)
                 end
     
                 state:set(updateValueByIndex(state.value, ActiveIndex, newValue, ActiveDrag.arguments :: any))
@@ -8832,6 +8843,7 @@ sources[nodes['widgets/Input']] = function(script)
                     ActiveDrag = thisWidget
                     ActiveIndex = index
                     ActiveDataType = dataTypes
+                    PreviousMouseXPosition = widgets.getMouseLocation().X
                     updateActiveDrag()
                 end
             end

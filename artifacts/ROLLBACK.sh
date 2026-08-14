@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-git -C "$repo_dir" show upstream/main:README.md > "$repo_dir/artifacts/ROLLBACK_COPY.md"
-cmp -s "$repo_dir/artifacts/BASELINE_FILE.md" "$repo_dir/artifacts/ROLLBACK_COPY.md"
-printf '%s\n' 'rollback restored ROLLBACK_COPY.md from the Iris upstream baseline'
+artifact_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+target=${1:?usage: ROLLBACK.sh TARGET_FILE}
+cp "$artifact_dir/BASELINE_FILE.lua" "$target"
+printf '%s\n' "rollback restored $target from BASELINE_FILE.lua"
