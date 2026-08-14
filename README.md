@@ -1,7 +1,7 @@
 
-# Iris
+# Rere
 
-Iris is an Immediate mode GUI Library for Roblox, Based on [Dear ImGui](https://github.com/ocornut/imgui). It solves the same problems as Dear ImGui: providing a simple and bloat-free UI system, designed for visualisation and debugging. It is fast, portable, and self-contained (no external dependencies).
+Rere is an executor-compatible bundle of [Iris](https://github.com/SirMallard/Iris), an immediate-mode GUI library for Roblox based on Dear ImGui. The generated `src/Rere.lua` contains the full Iris module tree and runs without Roblox Studio ModuleScripts.
 
 #### What is Dear ImGui, and why is it important?
 Dear ImGui is best known for allowing developers to create content-creation and visualisation and debugging UI. Using the Dear ImGui paradigm (Immediate Mode), UI design is remarkably easy and simple. Because of this, Dear ImGui has been adopted in almost every major game engine from Unity and Unreal Engine to in-house engines from Rockstar and Ubisoft (and now Roblox!).
@@ -10,15 +10,17 @@ Iris favors simplicity and productivity; It is designed to simplify UI, streamli
 
 Demo Place: https://rblx.games/7245022703
 
-### Usage
+### Executor Usage
 
-Iris can be installed as a [package](https://wally.run/package/sirmallard/iris) using [Wally](https://wally.run/), as an rbxm file from the [latest GitHub release](https://github.com/SirMallard/Iris/releases/latest) or building from [source](https://github.com/SirMallard/Iris/archive/refs/heads/main.zip). You can import the rbxm into any roblox project, and begin creating UI in any client side script. No external dependences are needed. Iris can be used under any kind of Roblox UI, including PlayerGui, CoreGui, BillboardGui, SurfaceGui, and PluginGui.
+Load the single-file bundle from your executor:
 
 Heres a basic Example:
 
 ```lua
-local StarterPlayerScripts = game.StarterPlayer.StarterPlayerScripts
-local Iris = require(StarterPlayerScripts.Client.Iris).Init()
+local compiler = loadstring or load
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/main/src/Rere.lua")
+local Iris = assert(compiler(source))()
+Iris.Init()
 
 Iris:Connect(function()
     Iris.Window({"My First Window!"})
@@ -28,6 +30,8 @@ Iris:Connect(function()
     Iris.End()
 end)
 ```
+
+See [`examples/executor_basic.lua`](examples/executor_basic.lua) and the [GitBook docs](docs/gitbook.md) for the executor workflow.
 
 <div align="center">
     <img src="assets/simpleExampleDark.png" alt="Simple example with dark mode"/>
