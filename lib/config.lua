@@ -238,7 +238,7 @@ local TemplateConfig = {
         SeparatorTextPadding = Vector2.new(20, 3),
         IndentSpacing = 21,
 
-        TextFont = Font.fromName("Inconsolata"),
+        TextFont = Font.fromName("Inconsolata", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         TextSize = 13,
         FrameBorderSize = 0,
         FrameRounding = 0,

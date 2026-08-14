@@ -2,5 +2,5 @@
 local compiler = loadstring or load
 assert(type(compiler) == "function", "Rere: executor must expose loadstring or load")
 
-local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.8/src/Rere.lua")
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.9/src/Rere.lua")
 return assert(compiler(source))()
