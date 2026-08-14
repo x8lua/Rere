@@ -2,36 +2,16 @@ local Types = require(script.Parent.Parent.Types)
 
 return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
     local function openTab(TabBar: Types.TabBar, Index: number)
-        if TabBar.state.index.value > 0 then
-            return
+        for i, tab in TabBar.Tabs do
+            tab.state.isOpened:set(i == Index)
         end
-
-        TabBar.state.index:set(Index)
     end
 
     local function closeTab(TabBar: Types.TabBar, Index: number)
-        if TabBar.state.index.value ~= Index then
-            return
+        local tab = TabBar.Tabs[Index]
+        if tab then
+            tab.state.isOpened:set(false)
         end
-
-        -- search left for open tabs
-        for i = Index - 1, 1, -1 do
-            if TabBar.Tabs[i].state.isOpened.value == true then
-                TabBar.state.index:set(i)
-                return
-            end
-        end
-
-        -- search right for open tabs
-        for i = Index, #TabBar.Tabs do
-            if TabBar.Tabs[i].state.isOpened.value == true then
-                TabBar.state.index:set(i)
-                return
-            end
-        end
-
-        -- no open tabs, so wait for one
-        TabBar.state.index:set(0)
     end
 
     --stylua: ignore
@@ -74,8 +54,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
             local ChildContainer = Instance.new("Frame")
             ChildContainer.Name = "TabContainer"
-            ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
-            ChildContainer.Size = UDim2.fromScale(1, 0)
+            ChildContainer.AutomaticSize = Enum.AutomaticSize.XY
+            ChildContainer.Size = UDim2.fromOffset(0, 0)
             ChildContainer.BackgroundColor3 = Iris._config.WindowBgColor
             ChildContainer.BackgroundTransparency = Iris._config.WindowBgTransparency
             ChildContainer.BorderSizePixel = 0
@@ -95,7 +75,6 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local TabBar = thisWidget.Instance :: Frame
             thisChild.ChildContainer.Parent = thisWidget.ChildContainer
             thisChild.Index = #thisWidget.Tabs + 1
-            thisWidget.state.index.ConnectedWidgets[thisChild.ID] = thisChild
             table.insert(thisWidget.Tabs, thisChild)
 
             return TabBar.Bar
@@ -112,7 +91,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         end,
         GenerateState = function(thisWidget: Types.Tab)
             if thisWidget.state.index == nil then
-                thisWidget.state.index = Iris._widgetState(thisWidget, "index", 1)
+                thisWidget.state.index = Iris._widgetState(thisWidget, "index", 0)
             end
         end,
         UpdateState = function(_thisWidget: Types.Tab)
@@ -152,7 +131,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             ["active"] = {
                 ["Init"] = function(_thisWidget: Types.Tab) end,
                 ["Get"] = function(thisWidget: Types.Tab)
-                    return thisWidget.state.index.value == thisWidget.Index
+                    return thisWidget.state.isOpened.value
                 end,
             },
             ["opened"] = {
@@ -192,7 +171,11 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             widgets.UIListLayout(Tab, Enum.FillDirection.Horizontal, UDim.new(0, Iris._config.ItemInnerSpacing.X)).VerticalAlignment = Enum.VerticalAlignment.Center
             widgets.applyInteractionHighlights("Background", Tab, Tab, thisWidget.ButtonColors)
             widgets.applyButtonClick(Tab, function()
-                thisWidget.state.index:set(thisWidget.Index)
+                if thisWidget.state.isOpened.value then
+                    closeTab(thisWidget.parentWidget, thisWidget.Index)
+                else
+                    openTab(thisWidget.parentWidget, thisWidget.Index)
+                end
             end)
 
             local TextLabel = Instance.new("TextLabel")
@@ -281,45 +264,29 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             return thisWidget.ChildContainer
         end,
         GenerateState = function(thisWidget: Types.Tab)
-            thisWidget.state.index = thisWidget.parentWidget.state.index
-            thisWidget.state.index.ConnectedWidgets[thisWidget.ID] = thisWidget
-
             if thisWidget.state.isOpened == nil then
-                thisWidget.state.isOpened = Iris._widgetState(thisWidget, "isOpened", true)
+                thisWidget.state.isOpened = Iris._widgetState(thisWidget, "isOpened", false)
             end
         end,
         UpdateState = function(thisWidget: Types.Tab)
             local Tab = thisWidget.Instance :: TextButton
             local Container = thisWidget.ChildContainer :: Frame
 
-            if thisWidget.state.isOpened.lastChangeTick == Iris._cycleTick then
-                if thisWidget.state.isOpened.value == true then
-                    thisWidget.lastOpenedTick = Iris._cycleTick + 1
-                    openTab(thisWidget.parentWidget, thisWidget.Index)
-                    Tab.Visible = true
-                else
-                    thisWidget.lastClosedTick = Iris._cycleTick + 1
-                    closeTab(thisWidget.parentWidget, thisWidget.Index)
-                    Tab.Visible = false
-                end
-            end
-
-            if thisWidget.state.index.lastChangeTick == Iris._cycleTick then
-                if thisWidget.state.index.value == thisWidget.Index then
-                    thisWidget.ButtonColors.Color = Iris._config.TabActiveColor
-                    thisWidget.ButtonColors.Transparency = Iris._config.TabActiveTransparency
-            Tab.BackgroundColor3 = Iris._config.TabActiveColor
-                    Tab.BackgroundTransparency = Iris._config.TabActiveTransparency
-                    Container.Visible = true
-                    thisWidget.lastSelectedTick = Iris._cycleTick + 1
-                else
-                    thisWidget.ButtonColors.Color = Iris._config.TabColor
-                    thisWidget.ButtonColors.Transparency = Iris._config.TabTransparency
-                    Tab.BackgroundColor3 = Iris._config.TabColor
-                    Tab.BackgroundTransparency = Iris._config.TabTransparency
-                    Container.Visible = false
-                    thisWidget.lastUnselectedTick = Iris._cycleTick + 1
-                end
+            if thisWidget.state.isOpened.value == true then
+                thisWidget.ButtonColors.Color = Iris._config.TabActiveColor
+                thisWidget.ButtonColors.Transparency = Iris._config.TabActiveTransparency
+                Tab.BackgroundColor3 = Iris._config.TabActiveColor
+                Tab.BackgroundTransparency = Iris._config.TabActiveTransparency
+                Container.Position = UDim2.fromOffset(Tab.AbsolutePosition.X - (thisWidget.parentWidget.Instance :: GuiObject).AbsolutePosition.X, 0)
+                Container.Visible = true
+                thisWidget.lastSelectedTick = Iris._cycleTick + 1
+            else
+                thisWidget.ButtonColors.Color = Iris._config.TabColor
+                thisWidget.ButtonColors.Transparency = Iris._config.TabTransparency
+                Tab.BackgroundColor3 = Iris._config.TabColor
+                Tab.BackgroundTransparency = Iris._config.TabTransparency
+                Container.Visible = false
+                thisWidget.lastUnselectedTick = Iris._cycleTick + 1
             end
         end,
         Discard = function(thisWidget: Types.Tab)

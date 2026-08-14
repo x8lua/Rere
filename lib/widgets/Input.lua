@@ -531,7 +531,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 increment *= (widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightAlt)) and 0.1 or 1
 
                 local value = getValueByIndex(state.value, ActiveIndex, ActiveDrag.arguments :: any)
-                newValue = value + (mouseXDelta * increment * 5)
+                newValue = value + (mouseXDelta * increment * 5 * 0.01)
 
                 if ActiveDrag.arguments.Min ~= nil then
                     newValue = math.max(newValue, getValueByIndex(ActiveDrag.arguments.Min, ActiveIndex, ActiveDrag.arguments :: any))

@@ -8804,11 +8804,10 @@ sources[nodes['widgets/Input']] = function(script)
                     PreviousMouseXPosition = currentMouseX
                     increment *= (widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightShift)) and 10 or 1
                     increment *= (widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightAlt)) and 0.1 or 1
-
+    
                     local value = getValueByIndex(state.value, ActiveIndex, ActiveDrag.arguments :: any)
-                    local dragScale = 0.01
-                    newValue = value + (mouseXDelta * increment * 5 * dragScale)
-
+                    newValue = value + (mouseXDelta * increment * 5 * 0.01)
+    
                     if ActiveDrag.arguments.Min ~= nil then
                         newValue = math.max(newValue, getValueByIndex(ActiveDrag.arguments.Min, ActiveIndex, ActiveDrag.arguments :: any))
                     end
@@ -11084,7 +11083,7 @@ sources[nodes['widgets/Tab']] = function(script)
                 tab.state.isOpened:set(i == Index)
             end
         end
-
+    
         local function closeTab(TabBar: Types.TabBar, Index: number)
             local tab = TabBar.Tabs[Index]
             if tab then
@@ -11349,7 +11348,7 @@ sources[nodes['widgets/Tab']] = function(script)
             UpdateState = function(thisWidget: Types.Tab)
                 local Tab = thisWidget.Instance :: TextButton
                 local Container = thisWidget.ChildContainer :: Frame
-
+    
                 if thisWidget.state.isOpened.value == true then
                     thisWidget.ButtonColors.Color = Iris._config.TabActiveColor
                     thisWidget.ButtonColors.Transparency = Iris._config.TabActiveTransparency
