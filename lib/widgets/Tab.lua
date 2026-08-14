@@ -57,7 +57,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             Bar.BackgroundTransparency = 1
             Bar.BorderSizePixel = 0
             
-            widgets.UIListLayout(Bar, Enum.FillDirection.Horizontal, UDim.new(0, Iris._config.ItemInnerSpacing.X))
+            widgets.UIListLayout(Bar, Enum.FillDirection.Horizontal, UDim.new())
 
             Bar.Parent = TabBar
 
