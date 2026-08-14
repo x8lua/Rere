@@ -277,7 +277,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 thisWidget.ButtonColors.Transparency = Iris._config.TabActiveTransparency
                 Tab.BackgroundColor3 = Iris._config.TabActiveColor
                 Tab.BackgroundTransparency = Iris._config.TabActiveTransparency
-                Container.Position = UDim2.fromOffset(Tab.AbsolutePosition.X - (thisWidget.parentWidget.Instance :: GuiObject).AbsolutePosition.X, 0)
+                Container.Position = UDim2.fromOffset(0, 0)
                 Container.Visible = true
                 thisWidget.lastSelectedTick = Iris._cycleTick + 1
             else
