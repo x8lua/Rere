@@ -18,32 +18,22 @@ Rere:Connect(function()
     local floatValue = Rere.State(0.5)
 
     Rere.Window({"Rere Settings"})
-        Rere.TabBar()
-            Rere.Tab({"Settings"})
-                Rere.Text({"Numeric controls"})
-                Rere.SliderNum({"Integer slider", 1, 0, 10}, {number = integerValue})
-                Rere.SliderNum({"Float slider", 0.01, 0, 1}, {number = floatValue})
-                Rere.DragNum({"Drag slider", 1, 0, 100})
-            Rere.End()
-
-            Rere.Tab({"Runtime Info"})
-                Rere.Text({"Cycle: " .. tostring(Rere.Internal._cycleTick)})
-                Rere.Text({"Delta time: " .. string.format("%.4f", Rere.Internal._deltaTime)})
-                Rere.Text({"Registered widgets: " .. tostring(countWidgets())})
-            Rere.End()
-
-            Rere.Tab({"Style Editor"})
-                Rere.Text({"Apply a built-in theme"})
-                if Rere.Button({"Dark theme"}).clicked() then
-                    Rere.UpdateGlobalConfig(Rere.TemplateConfig.colorDark)
-                end
-                if Rere.Button({"Light theme"}).clicked() then
-                    Rere.UpdateGlobalConfig(Rere.TemplateConfig.colorLight)
-                end
-                if Rere.Button({"Clear layout"}).clicked() then
-                    Rere.UpdateGlobalConfig(Rere.TemplateConfig.sizeClear)
-                end
+        Rere.MenuBar()
+            Rere.Menu({"Tabs"})
+                Rere.MenuItem({"Settings"})
+                Rere.MenuItem({"Runtime Info"})
+                Rere.MenuItem({"Style Editor"})
             Rere.End()
         Rere.End()
+
+        -- Page switching is intentionally deferred; Settings is shown below.
+        Rere.Text({"Numeric controls"})
+        Rere.SliderNum({"Integer slider", 1, 0, 10}, {number = integerValue})
+        Rere.SliderNum({"Float slider", 0.01, 0, 1}, {number = floatValue})
+        Rere.DragNum({"Drag slider", 1, 0, 100})
+        Rere.Text({"Cycle: " .. tostring(Rere.Internal._cycleTick)})
+        Rere.Text({"Delta time: " .. string.format("%.4f", Rere.Internal._deltaTime)})
+        Rere.Text({"Registered widgets: " .. tostring(countWidgets())})
+        Rere.Text({"Style Editor: use the built-in demo for live theme editing."})
     Rere.End()
 end)

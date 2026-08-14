@@ -50,10 +50,10 @@ end)
 
 The complete script is in [`examples/slider.lua`](../examples/slider.lua).
 
-## Settings, Runtime Info, And Style
+## Settings Dropdown, Runtime Info, And Style
 
-[`examples/settings_demo.lua`](../examples/settings_demo.lua) includes three tabs:
+[`examples/settings_demo.lua`](../examples/settings_demo.lua) includes a `MenuBar` dropdown with three page entries:
 
 - Settings with `SliderNum` and `DragNum` controls.
 - Runtime Info showing cycle, delta time, and registered widget count.
-- Style Editor buttons for dark, light, and clear-layout configurations.
+- Style Editor entry reserved for the later page-switching implementation.
