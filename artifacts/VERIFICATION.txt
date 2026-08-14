@@ -1,0 +1,27 @@
+Changed branch/field: main / Iris Studio module loading converted to the executor bundle entrypoint src/Rere.lua.
+
+BASELINE
+Command: git show upstream/main:lib/init.lua
+Input: Iris source uses require(script.Types), require(script.Internal), and nested ModuleScripts.
+Literal output/result: Studio module-tree source is present.
+Exit status: 0
+
+MODIFIED
+Command: node tools/build-executor.mjs; powershell -ExecutionPolicy Bypass -File tests/smoke.ps1
+Input: lib/**/*.lua
+Literal output/result: Rere executor bundle smoke test passed.
+Exit status: 0
+
+EXECUTOR
+Command: get-data-by-code loading https://raw.githubusercontent.com/x8lua/Rere/0ab9116/src/Rere.lua, then Rere.Init(nil, false)
+Input: immutable Rere bundle source
+Literal output/result: {true,"function",n=2}
+Exit status: 0
+
+ROLLBACK
+Command: sh artifacts/ROLLBACK.sh
+Input: upstream/main:README.md
+Literal output/result: rollback restored ROLLBACK_COPY.md from the Iris upstream baseline.
+Exit status: 0
+
+Restored behavior/status: ROLLBACK_COPY.md matches BASELINE_FILE.md while src/Rere.lua remains the executor-compatible bundle.
