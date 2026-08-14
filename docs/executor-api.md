@@ -37,9 +37,8 @@ The original Iris API details remain available in the bundled source and are att
 ## Slider
 
 ```lua
-local volume = Rere.State(50)
-
 Rere:Connect(function()
+    local volume = Rere.State(50)
     Rere.Window({"Slider example"})
         Rere.Text({"Volume: " .. volume:get() .. "%"})
         Rere.SliderNum({"Volume", 1, 0, 100, "%d%%"}, {

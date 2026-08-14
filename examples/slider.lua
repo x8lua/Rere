@@ -5,9 +5,8 @@ local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.0
 local Rere = assert(compiler(source))()
 Rere.Init()
 
-local volume = Rere.State(50)
-
 Rere:Connect(function()
+    local volume = Rere.State(50)
     Rere.Window({"Slider example"})
         Rere.Text({"Volume: " .. volume:get() .. "%"})
         Rere.SliderNum({"Volume", 1, 0, 100, "%d%%"}, {
