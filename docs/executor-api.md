@@ -49,3 +49,11 @@ end)
 ```
 
 The complete script is in [`examples/slider.lua`](../examples/slider.lua).
+
+## Settings, Runtime Info, And Style
+
+[`examples/settings_demo.lua`](../examples/settings_demo.lua) includes three tabs:
+
+- Settings with `SliderNum` and `DragNum` controls.
+- Runtime Info showing cycle, delta time, and registered widget count.
+- Style Editor buttons for dark, light, and clear-layout configurations.

@@ -3,3 +3,4 @@
 * [Rere Executor Docs](gitbook.md)
 * [Executor API](executor-api.md)
 * [Example Script](../examples/executor_basic.lua)
+* [Settings Demo](../examples/settings_demo.lua)
