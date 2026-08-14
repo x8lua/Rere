@@ -43,7 +43,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local Button = Header.Button :: TextButton
             local Arrow: ImageLabel = Button.Arrow
 
-            Arrow.Image = (isUncollapsed and widgets.ICONS.DOWN_POINTING_TRIANGLE or widgets.ICONS.RIGHT_POINTING_TRIANGLE)
+            Arrow.Image = widgets.ICONS.RIGHT_POINTING_TRIANGLE
+            TweenService:Create(Arrow, OpenTweenInfo, { Rotation = isUncollapsed and 90 or 0 }):Play()
             if isUncollapsed then
                 thisWidget.lastUncollapsedTick = Iris._cycleTick + 1
             else
