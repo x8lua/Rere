@@ -4501,7 +4501,7 @@ sources[nodes['config']] = function(script)
             SeparatorTextPadding = Vector2.new(20, 3),
             IndentSpacing = 21,
     
-            TextFont = Font.fromName("Inconsolata", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+            TextFont = Font.fromName("Inconsolata", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
             TextSize = 13,
             FrameBorderSize = 0,
             FrameRounding = 0,
@@ -7478,7 +7478,7 @@ sources[nodes['widgets/Combo']] = function(script)
     
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local TweenService = game:GetService("TweenService")
-        local OpenTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local OpenTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         --stylua: ignore
         Iris.WidgetConstructor("Selectable", {
             hasState = true,
@@ -9568,7 +9568,7 @@ sources[nodes['widgets/Menu']] = function(script)
     
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local TweenService = game:GetService("TweenService")
-        local OpenTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local OpenTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         local AnyMenuOpen = false
         local ActiveMenu: Types.Menu? = nil
         local MenuStack: { Types.Menu } = {}
@@ -11103,7 +11103,7 @@ sources[nodes['widgets/Tab']] = function(script)
     
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local TweenService = game:GetService("TweenService")
-        local OpenTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local OpenTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     
         local function openTab(TabBar: Types.TabBar, Index: number)
             for i, tab in TabBar.Tabs do
@@ -12196,7 +12196,7 @@ sources[nodes['widgets/Tree']] = function(script)
     
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local TweenService = game:GetService("TweenService")
-        local OpenTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local OpenTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     
         local abstractTree = {
             hasState = true,
