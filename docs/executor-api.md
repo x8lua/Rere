@@ -33,3 +33,20 @@ end)
 ```
 
 The original Iris API details remain available in the bundled source and are attributed under the MIT license.
+
+## Slider
+
+```lua
+local volume = Rere.State(50)
+
+Rere:Connect(function()
+    Rere.Window({"Slider example"})
+        Rere.Text({"Volume: " .. volume:get() .. "%"})
+        Rere.SliderNum({"Volume", 1, 0, 100, "%d%%"}, {
+            number = volume,
+        })
+    Rere.End()
+end)
+```
+
+The complete script is in [`examples/slider.lua`](../examples/slider.lua).
