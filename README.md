@@ -18,7 +18,7 @@ Heres a basic Example:
 
 ```lua
 local compiler = loadstring or load
-local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/main/src/Rere.lua")
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.0/src/Rere.lua")
 local Iris = assert(compiler(source))()
 Iris.Init()
 
@@ -40,8 +40,10 @@ See [`examples/executor_basic.lua`](examples/executor_basic.lua) and the [GitBoo
 And a more complex Example:
 
 ```lua
-local StarterPlayerScripts = game.StarterPlayer.StarterPlayerScripts
-local Iris = require(StarterPlayerScripts.Client.Iris).Init()
+local compiler = loadstring or load
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.0/src/Rere.lua")
+local Iris = assert(compiler(source))()
+Iris.Init()
 
 Iris:Connect(function()
     -- use a unique window size, rather than default

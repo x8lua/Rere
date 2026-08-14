@@ -6,7 +6,7 @@ Rere is an executor-compatible distribution of [Iris](https://github.com/SirMall
 
 ```lua
 local compiler = loadstring or load
-local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/main/src/Rere.lua")
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.0/src/Rere.lua")
 local Rere = assert(compiler(source))()
 Rere.Init()
 ```
@@ -26,4 +26,4 @@ end)
 
 ## GitBook setup
 
-Use this repository's `docs/` directory as the GitBook space content. Set the GitBook repository integration to `x8lua/Rere`, branch `main`, and publish `docs/gitbook.md` as the introduction page.
+Use this repository's `docs/` directory as the GitBook space content. Set the GitBook repository integration to `x8lua/Rere`, branch `main`, and use `docs/SUMMARY.md` for navigation.
