@@ -329,14 +329,15 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             if thisWidget.state.isOpened.value then
                 thisWidget.lastOpenedTick = Iris._cycleTick + 1
                 thisWidget.ButtonColors.Transparency = Iris._config.HeaderTransparency
-                if not ChildContainer.Visible then
-                    local OpenScale = ChildContainer.OpenScale :: UIScale
-                    OpenScale.Scale = 1.15
-                    TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1.2 }):Play()
-                end
+                local ShouldAnimate = not ChildContainer.Visible
                 ChildContainer.Visible = true
 
                 UpdateChildContainerTransform(thisWidget)
+                if ShouldAnimate then
+                    local TargetPosition = ChildContainer.Position
+                    ChildContainer.Position = TargetPosition - UDim2.fromOffset(0, 8)
+                    TweenService:Create(ChildContainer, OpenTweenInfo, { Position = TargetPosition }):Play()
+                end
             else
                 thisWidget.lastClosedTick = Iris._cycleTick + 1
                 thisWidget.ButtonColors.Transparency = 1

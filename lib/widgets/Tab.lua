@@ -251,10 +251,6 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
             widgets.UIPadding(ChildContainer, Vector2.new(0, Iris._config.ItemSpacing.Y)).PaddingBottom = UDim.new()
 
-            local OpenScale = Instance.new("UIScale")
-            OpenScale.Name = "OpenScale"
-            OpenScale.Parent = ChildContainer
-
             thisWidget.ChildContainer = ChildContainer
 
             return Tab
@@ -286,9 +282,10 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 Tab.BackgroundTransparency = Iris._config.TabActiveTransparency
                 Container.Position = UDim2.fromOffset(0, 0)
                 if not Container.Visible then
-                    local OpenScale = Container.OpenScale :: UIScale
-                    OpenScale.Scale = 0.96
-                    TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1 }):Play()
+                    local Padding = Container.UIPadding :: UIPadding
+                    Padding.PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y - 8)
+                    Container.Visible = true
+                    TweenService:Create(Padding, OpenTweenInfo, { PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y) }):Play()
                 end
                 Container.Visible = true
                 thisWidget.lastSelectedTick = Iris._cycleTick + 1

@@ -464,14 +464,15 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
                 -- ImGui also does not do this, and the Arrow is always facing down
                 Dropdown.Image = widgets.ICONS.RIGHT_POINTING_TRIANGLE
-                if not ChildContainer.Visible then
-                    local OpenScale = ChildContainer.OpenScale :: UIScale
-                    OpenScale.Scale = 1.15
-                    TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1.2 }):Play()
-                end
+                local ShouldAnimate = not ChildContainer.Visible
                 ChildContainer.Visible = true
 
                 UpdateChildContainerTransform(thisWidget)
+                if ShouldAnimate then
+                    local TargetPosition = ChildContainer.Position
+                    ChildContainer.Position = TargetPosition - UDim2.fromOffset(0, 8)
+                    TweenService:Create(ChildContainer, OpenTweenInfo, { Position = TargetPosition }):Play()
+                end
             else
                 if AnyOpenedCombo then
                     AnyOpenedCombo = false

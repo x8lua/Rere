@@ -51,9 +51,10 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             end
 
             if isUncollapsed and not ChildContainer.Visible then
-                local OpenScale = ChildContainer.OpenScale :: UIScale
-                OpenScale.Scale = 0.96
-                TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1 }):Play()
+                local Padding = ChildContainer.UIPadding :: UIPadding
+                Padding.PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y - 8)
+                ChildContainer.Visible = true
+                TweenService:Create(Padding, OpenTweenInfo, { PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y) }):Play()
             end
             ChildContainer.Visible = isUncollapsed
         end,
@@ -92,14 +93,10 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 ChildContainer.BorderSizePixel = 0
                 ChildContainer.LayoutOrder = 1
                 ChildContainer.Visible = false
-                -- ChildContainer.ClipsDescendants = true
+                ChildContainer.ClipsDescendants = true
 
                 widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
                 widgets.UIPadding(ChildContainer, Vector2.zero).PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y)
-
-                local OpenScale = Instance.new("UIScale")
-                OpenScale.Name = "OpenScale"
-                OpenScale.Parent = ChildContainer
 
                 ChildContainer.Parent = Tree
 
@@ -214,14 +211,10 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 ChildContainer.BorderSizePixel = 0
                 ChildContainer.LayoutOrder = 1
                 ChildContainer.Visible = false
-                -- ChildContainer.ClipsDescendants = true
+                ChildContainer.ClipsDescendants = true
 
                 widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
                 widgets.UIPadding(ChildContainer, Vector2.zero).PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y)
-
-                local OpenScale = Instance.new("UIScale")
-                OpenScale.Name = "OpenScale"
-                OpenScale.Parent = ChildContainer
 
                 ChildContainer.Parent = CollapsingHeader
 

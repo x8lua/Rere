@@ -7940,14 +7940,15 @@ sources[nodes['widgets/Combo']] = function(script)
     
                     -- ImGui also does not do this, and the Arrow is always facing down
                     Dropdown.Image = widgets.ICONS.RIGHT_POINTING_TRIANGLE
-                    if not ChildContainer.Visible then
-                        local OpenScale = ChildContainer.OpenScale :: UIScale
-                        OpenScale.Scale = 1.15
-                        TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1.2 }):Play()
-                    end
+                    local ShouldAnimate = not ChildContainer.Visible
                     ChildContainer.Visible = true
     
                     UpdateChildContainerTransform(thisWidget)
+                    if ShouldAnimate then
+                        local TargetPosition = ChildContainer.Position
+                        ChildContainer.Position = TargetPosition - UDim2.fromOffset(0, 8)
+                        TweenService:Create(ChildContainer, OpenTweenInfo, { Position = TargetPosition }):Play()
+                    end
                 else
                     if AnyOpenedCombo then
                         AnyOpenedCombo = false
@@ -9895,14 +9896,15 @@ sources[nodes['widgets/Menu']] = function(script)
                 if thisWidget.state.isOpened.value then
                     thisWidget.lastOpenedTick = Iris._cycleTick + 1
                     thisWidget.ButtonColors.Transparency = Iris._config.HeaderTransparency
-                    if not ChildContainer.Visible then
-                        local OpenScale = ChildContainer.OpenScale :: UIScale
-                        OpenScale.Scale = 1.15
-                        TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1.2 }):Play()
-                    end
+                    local ShouldAnimate = not ChildContainer.Visible
                     ChildContainer.Visible = true
     
                     UpdateChildContainerTransform(thisWidget)
+                    if ShouldAnimate then
+                        local TargetPosition = ChildContainer.Position
+                        ChildContainer.Position = TargetPosition - UDim2.fromOffset(0, 8)
+                        TweenService:Create(ChildContainer, OpenTweenInfo, { Position = TargetPosition }):Play()
+                    end
                 else
                     thisWidget.lastClosedTick = Iris._cycleTick + 1
                     thisWidget.ButtonColors.Transparency = 1
@@ -11352,10 +11354,6 @@ sources[nodes['widgets/Tab']] = function(script)
                 widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
                 widgets.UIPadding(ChildContainer, Vector2.new(0, Iris._config.ItemSpacing.Y)).PaddingBottom = UDim.new()
     
-                local OpenScale = Instance.new("UIScale")
-                OpenScale.Name = "OpenScale"
-                OpenScale.Parent = ChildContainer
-    
                 thisWidget.ChildContainer = ChildContainer
     
                 return Tab
@@ -11387,9 +11385,10 @@ sources[nodes['widgets/Tab']] = function(script)
                     Tab.BackgroundTransparency = Iris._config.TabActiveTransparency
                     Container.Position = UDim2.fromOffset(0, 0)
                     if not Container.Visible then
-                        local OpenScale = Container.OpenScale :: UIScale
-                        OpenScale.Scale = 0.96
-                        TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1 }):Play()
+                        local Padding = Container.UIPadding :: UIPadding
+                        Padding.PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y - 8)
+                        Container.Visible = true
+                        TweenService:Create(Padding, OpenTweenInfo, { PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y) }):Play()
                     end
                     Container.Visible = true
                     thisWidget.lastSelectedTick = Iris._cycleTick + 1
@@ -12245,9 +12244,10 @@ sources[nodes['widgets/Tree']] = function(script)
                 end
     
                 if isUncollapsed and not ChildContainer.Visible then
-                    local OpenScale = ChildContainer.OpenScale :: UIScale
-                    OpenScale.Scale = 0.96
-                    TweenService:Create(OpenScale, OpenTweenInfo, { Scale = 1 }):Play()
+                    local Padding = ChildContainer.UIPadding :: UIPadding
+                    Padding.PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y - 8)
+                    ChildContainer.Visible = true
+                    TweenService:Create(Padding, OpenTweenInfo, { PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y) }):Play()
                 end
                 ChildContainer.Visible = isUncollapsed
             end,
@@ -12286,14 +12286,10 @@ sources[nodes['widgets/Tree']] = function(script)
                     ChildContainer.BorderSizePixel = 0
                     ChildContainer.LayoutOrder = 1
                     ChildContainer.Visible = false
-                    -- ChildContainer.ClipsDescendants = true
+                    ChildContainer.ClipsDescendants = true
     
                     widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
                     widgets.UIPadding(ChildContainer, Vector2.zero).PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y)
-    
-                    local OpenScale = Instance.new("UIScale")
-                    OpenScale.Name = "OpenScale"
-                    OpenScale.Parent = ChildContainer
     
                     ChildContainer.Parent = Tree
     
@@ -12408,14 +12404,10 @@ sources[nodes['widgets/Tree']] = function(script)
                     ChildContainer.BorderSizePixel = 0
                     ChildContainer.LayoutOrder = 1
                     ChildContainer.Visible = false
-                    -- ChildContainer.ClipsDescendants = true
+                    ChildContainer.ClipsDescendants = true
     
                     widgets.UIListLayout(ChildContainer, Enum.FillDirection.Vertical, UDim.new(0, Iris._config.ItemSpacing.Y))
                     widgets.UIPadding(ChildContainer, Vector2.zero).PaddingTop = UDim.new(0, Iris._config.ItemSpacing.Y)
-    
-                    local OpenScale = Instance.new("UIScale")
-                    OpenScale.Name = "OpenScale"
-                    OpenScale.Parent = ChildContainer
     
                     ChildContainer.Parent = CollapsingHeader
     
