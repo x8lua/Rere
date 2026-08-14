@@ -8889,7 +8889,20 @@ sources[nodes['widgets/Input']] = function(script)
                 DragIndicator.BorderSizePixel = 0
                 DragIndicator.ZIndex = 0
                 DragIndicator.Parent = DragField
-    
+
+                local OverlayText = Instance.new("TextLabel")
+                OverlayText.Name = "OverlayText"
+                OverlayText.Size = UDim2.fromScale(1, 1)
+                OverlayText.BackgroundTransparency = 1
+                OverlayText.BorderSizePixel = 0
+                OverlayText.ZIndex = 10
+                OverlayText.ClipsDescendants = true
+
+                widgets.applyTextStyle(OverlayText)
+
+                OverlayText.TextXAlignment = Enum.TextXAlignment.Center
+                OverlayText.Parent = DragField
+
                 local InputField = Instance.new("TextBox")
                 InputField.Name = "InputField"
                 InputField.Size = UDim2.fromScale(1, 1)
@@ -8998,6 +9011,7 @@ sources[nodes['widgets/Input']] = function(script)
                             end
                             local DragField = Drag:FindFirstChild("DragField" .. tostring(index)) :: TextButton
                             local InputField: TextBox = DragField.InputField
+                            local OverlayText: TextLabel = DragField.OverlayText
                             local DragIndicator: Frame = DragField.DragIndicator
                             local value = getValueByIndex(state.value, index, thisWidget.arguments :: any)
                             if (dataType == "Color3" or dataType == "Color4") and not widget.arguments.UseFloats then
@@ -9008,7 +9022,9 @@ sources[nodes['widgets/Input']] = function(script)
                             if thisWidget.arguments.Prefix then
                                 format = thisWidget.arguments.Prefix[index] .. format
                             end
-                            DragField.Text = string.format(format, value)
+                            local displayText = string.format(format, value)
+                            DragField.Text = ""
+                            OverlayText.Text = displayText
                             InputField.Text = tostring(value)
     
                             local min = thisWidget.arguments.Min and getValueByIndex(thisWidget.arguments.Min, index, thisWidget.arguments :: any) or defaultMin[dataType][index]
@@ -9020,10 +9036,10 @@ sources[nodes['widgets/Input']] = function(script)
                             if thisWidget.state.editingText.value == index then
                                 InputField.Visible = true
                                 InputField:CaptureFocus()
-                                DragField.TextTransparency = 1
+                                OverlayText.Visible = false
                             else
                                 InputField.Visible = false
-                                DragField.TextTransparency = Iris._config.TextTransparency
+                                OverlayText.Visible = true
                             end
                         end
     
@@ -11097,8 +11113,6 @@ sources[nodes['widgets/Tab']] = function(script)
                 TabBar.Size = UDim2.fromScale(1, 0)
                 TabBar.BackgroundTransparency = 1
                 TabBar.BorderSizePixel = 0
-                -- Pull the bar through the window's top padding so tabs meet the title bar.
-                TabBar.Position = UDim2.fromOffset(0, -Iris._config.WindowPadding.Y)
     
                 widgets.UIListLayout(TabBar, Enum.FillDirection.Vertical, UDim.new()).VerticalAlignment = Enum.VerticalAlignment.Bottom
                 
@@ -11120,14 +11134,16 @@ sources[nodes['widgets/Tab']] = function(script)
                 Underline.BackgroundTransparency = Iris._config.TabActiveTransparency
                 Underline.BorderSizePixel = 0
                 Underline.LayoutOrder = 1
-    
+                Underline.Visible = false
+
                 Underline.Parent = TabBar
     
                 local ChildContainer = Instance.new("Frame")
                 ChildContainer.Name = "TabContainer"
                 ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
                 ChildContainer.Size = UDim2.fromScale(1, 0)
-                ChildContainer.BackgroundTransparency = 1
+                ChildContainer.BackgroundColor3 = Iris._config.WindowBgColor
+                ChildContainer.BackgroundTransparency = Iris._config.WindowBgTransparency
                 ChildContainer.BorderSizePixel = 0
                 ChildContainer.LayoutOrder = 2
                 ChildContainer.ClipsDescendants = true
@@ -12923,7 +12939,11 @@ sources[nodes['widgets/Window']] = function(script)
                 ChildContainer.LayoutOrder = thisWidget.ZIndex + 0xFFFF
                 ChildContainer.ClipsDescendants = true
     
-                widgets.UIPadding(ChildContainer, Iris._config.WindowPadding)
+                local WindowPadding = widgets.UIPadding(ChildContainer, Iris._config.WindowPadding)
+                -- Let the first top-level TabBar sit directly under the title bar instead of
+                -- being pushed down by the window body padding. Non-tab content keeps its own
+                -- spacing through the normal item layout/padding rules.
+                WindowPadding.PaddingTop = UDim.new()
     
                 ChildContainer.Parent = Content
     
