@@ -47,6 +47,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             TabBar.Size = UDim2.fromScale(1, 0)
             TabBar.BackgroundTransparency = 1
             TabBar.BorderSizePixel = 0
+            -- Pull the bar through the window's top padding so tabs meet the title bar.
+            TabBar.Position = UDim2.fromOffset(0, -Iris._config.WindowPadding.Y)
 
             widgets.UIListLayout(TabBar, Enum.FillDirection.Vertical, UDim.new()).VerticalAlignment = Enum.VerticalAlignment.Bottom
             

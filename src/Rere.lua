@@ -4323,7 +4323,7 @@ sources[nodes['config']] = function(script)
             HeaderActiveTransparency = 0,
     
             TabColor = Color3.fromRGB(46, 89, 148),
-            TabTransparency = 0.14,
+            TabTransparency = 1,
             TabHoveredColor = Color3.fromRGB(66, 150, 250),
             TabHoveredTransparency = 0.2,
             TabActiveColor = Color3.fromRGB(51, 105, 173),
@@ -4431,7 +4431,7 @@ sources[nodes['config']] = function(script)
             HeaderActiveTransparency = 0,
     
             TabColor = Color3.fromRGB(195, 203, 213),
-            TabTransparency = 0.07,
+            TabTransparency = 1,
             TabHoveredColor = Color3.fromRGB(66, 150, 250),
             TabHoveredTransparency = 0.2,
             TabActiveColor = Color3.fromRGB(152, 186, 255),
@@ -8881,6 +8881,15 @@ sources[nodes['widgets/Input']] = function(script)
                     ActiveTransparency = Iris._config.FrameBgActiveTransparency,
                 })
     
+                local DragIndicator = Instance.new("Frame")
+                DragIndicator.Name = "DragIndicator"
+                DragIndicator.Size = UDim2.fromScale(0, 1)
+                DragIndicator.BackgroundColor3 = Iris._config.SliderGrabColor
+                DragIndicator.BackgroundTransparency = Iris._config.SliderGrabTransparency
+                DragIndicator.BorderSizePixel = 0
+                DragIndicator.ZIndex = 0
+                DragIndicator.Parent = DragField
+    
                 local InputField = Instance.new("TextBox")
                 InputField.Name = "InputField"
                 InputField.Size = UDim2.fromScale(1, 1)
@@ -8989,6 +8998,7 @@ sources[nodes['widgets/Input']] = function(script)
                             end
                             local DragField = Drag:FindFirstChild("DragField" .. tostring(index)) :: TextButton
                             local InputField: TextBox = DragField.InputField
+                            local DragIndicator: Frame = DragField.DragIndicator
                             local value = getValueByIndex(state.value, index, thisWidget.arguments :: any)
                             if (dataType == "Color3" or dataType == "Color4") and not widget.arguments.UseFloats then
                                 value = math.round(value * 255)
@@ -9000,6 +9010,12 @@ sources[nodes['widgets/Input']] = function(script)
                             end
                             DragField.Text = string.format(format, value)
                             InputField.Text = tostring(value)
+    
+                            local min = thisWidget.arguments.Min and getValueByIndex(thisWidget.arguments.Min, index, thisWidget.arguments :: any) or defaultMin[dataType][index]
+                            local max = thisWidget.arguments.Max and getValueByIndex(thisWidget.arguments.Max, index, thisWidget.arguments :: any) or defaultMax[dataType][index]
+                            if dataType ~= "Color3" and dataType ~= "Color4" and typeof(value) == "number" and max > min then
+                                DragIndicator.Size = UDim2.fromScale(math.clamp((value - min) / (max - min), 0, 1), 1)
+                            end
     
                             if thisWidget.state.editingText.value == index then
                                 InputField.Visible = true
@@ -11081,6 +11097,8 @@ sources[nodes['widgets/Tab']] = function(script)
                 TabBar.Size = UDim2.fromScale(1, 0)
                 TabBar.BackgroundTransparency = 1
                 TabBar.BorderSizePixel = 0
+                -- Pull the bar through the window's top padding so tabs meet the title bar.
+                TabBar.Position = UDim2.fromOffset(0, -Iris._config.WindowPadding.Y)
     
                 widgets.UIListLayout(TabBar, Enum.FillDirection.Vertical, UDim.new()).VerticalAlignment = Enum.VerticalAlignment.Bottom
                 

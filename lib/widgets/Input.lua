@@ -606,6 +606,15 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 ActiveTransparency = Iris._config.FrameBgActiveTransparency,
             })
 
+            local DragIndicator = Instance.new("Frame")
+            DragIndicator.Name = "DragIndicator"
+            DragIndicator.Size = UDim2.fromScale(0, 1)
+            DragIndicator.BackgroundColor3 = Iris._config.SliderGrabColor
+            DragIndicator.BackgroundTransparency = Iris._config.SliderGrabTransparency
+            DragIndicator.BorderSizePixel = 0
+            DragIndicator.ZIndex = 0
+            DragIndicator.Parent = DragField
+
             local InputField = Instance.new("TextBox")
             InputField.Name = "InputField"
             InputField.Size = UDim2.fromScale(1, 1)
@@ -714,6 +723,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                         end
                         local DragField = Drag:FindFirstChild("DragField" .. tostring(index)) :: TextButton
                         local InputField: TextBox = DragField.InputField
+                        local DragIndicator: Frame = DragField.DragIndicator
                         local value = getValueByIndex(state.value, index, thisWidget.arguments :: any)
                         if (dataType == "Color3" or dataType == "Color4") and not widget.arguments.UseFloats then
                             value = math.round(value * 255)
@@ -725,6 +735,12 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                         end
                         DragField.Text = string.format(format, value)
                         InputField.Text = tostring(value)
+
+                        local min = thisWidget.arguments.Min and getValueByIndex(thisWidget.arguments.Min, index, thisWidget.arguments :: any) or defaultMin[dataType][index]
+                        local max = thisWidget.arguments.Max and getValueByIndex(thisWidget.arguments.Max, index, thisWidget.arguments :: any) or defaultMax[dataType][index]
+                        if dataType ~= "Color3" and dataType ~= "Color4" and typeof(value) == "number" and max > min then
+                            DragIndicator.Size = UDim2.fromScale(math.clamp((value - min) / (max - min), 0, 1), 1)
+                        end
 
                         if thisWidget.state.editingText.value == index then
                             InputField.Visible = true

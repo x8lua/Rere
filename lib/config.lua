@@ -60,7 +60,7 @@ local TemplateConfig = {
         HeaderActiveTransparency = 0,
 
         TabColor = Color3.fromRGB(46, 89, 148),
-        TabTransparency = 0.14,
+        TabTransparency = 1,
         TabHoveredColor = Color3.fromRGB(66, 150, 250),
         TabHoveredTransparency = 0.2,
         TabActiveColor = Color3.fromRGB(51, 105, 173),
@@ -168,7 +168,7 @@ local TemplateConfig = {
         HeaderActiveTransparency = 0,
 
         TabColor = Color3.fromRGB(195, 203, 213),
-        TabTransparency = 0.07,
+        TabTransparency = 1,
         TabHoveredColor = Color3.fromRGB(66, 150, 250),
         TabHoveredTransparency = 0.2,
         TabActiveColor = Color3.fromRGB(152, 186, 255),
