@@ -12,8 +12,8 @@ local TemplateConfig = {
         BorderActiveColor = Color3.fromRGB(160, 160, 175), -- does not exist in Dear ImGui
         BorderActiveTransparency = 0.3,
 
-        WindowBgColor = Color3.fromRGB(15, 15, 15),
-        WindowBgTransparency = 0.06,
+        WindowBgColor = Color3.fromRGB(32, 32, 32),
+        WindowBgTransparency = 0,
         PopupBgColor = Color3.fromRGB(20, 20, 20),
         PopupBgTransparency = 0.06,
 

@@ -4275,8 +4275,8 @@ sources[nodes['config']] = function(script)
             BorderActiveColor = Color3.fromRGB(160, 160, 175), -- does not exist in Dear ImGui
             BorderActiveTransparency = 0.3,
     
-            WindowBgColor = Color3.fromRGB(15, 15, 15),
-            WindowBgTransparency = 0.06,
+            WindowBgColor = Color3.fromRGB(32, 32, 32),
+            WindowBgTransparency = 0,
             PopupBgColor = Color3.fromRGB(20, 20, 20),
             PopupBgTransparency = 0.06,
     
@@ -11111,7 +11111,8 @@ sources[nodes['widgets/Tab']] = function(script)
                 Bar.Name = "Bar"
                 Bar.AutomaticSize = Enum.AutomaticSize.Y
                 Bar.Size = UDim2.fromScale(1, 0)
-                Bar.BackgroundTransparency = 1
+                Bar.BackgroundColor3 = Iris._config.MenubarBgColor
+                Bar.BackgroundTransparency = Iris._config.MenubarBgTransparency
                 Bar.BorderSizePixel = 0
                 
                 widgets.UIListLayout(Bar, Enum.FillDirection.Horizontal, UDim.new())
@@ -11133,8 +11134,7 @@ sources[nodes['widgets/Tab']] = function(script)
                 ChildContainer.Name = "TabContainer"
                 ChildContainer.AutomaticSize = Enum.AutomaticSize.XY
                 ChildContainer.Size = UDim2.fromOffset(0, 0)
-                ChildContainer.BackgroundColor3 = Iris._config.WindowBgColor
-                ChildContainer.BackgroundTransparency = Iris._config.WindowBgTransparency
+                ChildContainer.BackgroundTransparency = 1
                 ChildContainer.BorderSizePixel = 0
                 ChildContainer.LayoutOrder = 2
                 ChildContainer.ClipsDescendants = true
