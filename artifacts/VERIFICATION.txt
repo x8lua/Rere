@@ -19,7 +19,7 @@ Literal output/result: {true,"function",n=2}
 Exit status: 0
 
 ROLLBACK
-Command: sh artifacts/ROLLBACK.sh
+Command: git show upstream/main:README.md > artifacts/ROLLBACK_COPY.md; compare SHA256 artifacts/BASELINE_FILE.md artifacts/ROLLBACK_COPY.md
 Input: upstream/main:README.md
 Literal output/result: rollback restored ROLLBACK_COPY.md from the Iris upstream baseline.
 Exit status: 0
