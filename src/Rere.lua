@@ -6561,7 +6561,7 @@ sources[nodes['Iris']] = function(script)
     
     local Internal: Types.Internal = require(script.Internal)(Iris)
     
-    Iris.Version = "0.1.16"
+    Iris.Version = "0.1.17"
     function Iris:GetVersion(): string
         return self.Version
     end
@@ -12264,13 +12264,14 @@ sources[nodes['widgets/Tree']] = function(script)
                 local ChildContainer = thisWidget.ChildContainer :: Frame
                 local Header = Tree.Header :: Frame
                 local Button = Header.Button :: TextButton
-                local Arrow: ImageLabel = Button.Arrow
+                local ArrowRotationFrame: Frame = Button.ArrowRotationFrame
+                local Arrow: ImageLabel = ArrowRotationFrame.Arrow
     
                 Arrow.Image = widgets.ICONS.RIGHT_POINTING_TRIANGLE
                 local TargetRotation = isUncollapsed and 90 or 0
-                if Arrow:GetAttribute("TargetRotation") ~= TargetRotation then
-                    Arrow:SetAttribute("TargetRotation", TargetRotation)
-                    TweenService:Create(Arrow, OpenTweenInfo, { Rotation = TargetRotation }):Play()
+                if ArrowRotationFrame:GetAttribute("TargetRotation") ~= TargetRotation then
+                    ArrowRotationFrame:SetAttribute("TargetRotation", TargetRotation)
+                    TweenService:Create(ArrowRotationFrame, OpenTweenInfo, { Rotation = TargetRotation }):Play()
                 end
                 if isUncollapsed then
                     thisWidget.lastUncollapsedTick = Iris._cycleTick + 1
@@ -12370,16 +12371,22 @@ sources[nodes['widgets/Tree']] = function(script)
     
                     Button.Parent = Header
     
+                    local ArrowRotationFrame = Instance.new("Frame")
+                    ArrowRotationFrame.Name = "ArrowRotationFrame"
+                    ArrowRotationFrame.Size = UDim2.fromOffset(Iris._config.TextSize, math.floor(Iris._config.TextSize * 0.7))
+                    ArrowRotationFrame.BackgroundTransparency = 1
+                    ArrowRotationFrame.BorderSizePixel = 0
+                    ArrowRotationFrame.Parent = Button
                     local Arrow = Instance.new("ImageLabel")
                     Arrow.Name = "Arrow"
-                    Arrow.Size = UDim2.fromOffset(Iris._config.TextSize, math.floor(Iris._config.TextSize * 0.7))
+                    Arrow.Size = UDim2.fromScale(1, 1)
                     Arrow.BackgroundTransparency = 1
                     Arrow.BorderSizePixel = 0
                     Arrow.ImageColor3 = Iris._config.TextColor
                     Arrow.ImageTransparency = Iris._config.TextTransparency
                     Arrow.ScaleType = Enum.ScaleType.Fit
     
-                    Arrow.Parent = Button
+                    Arrow.Parent = ArrowRotationFrame
     
                     local TextLabel = Instance.new("TextLabel")
                     TextLabel.Name = "TextLabel"

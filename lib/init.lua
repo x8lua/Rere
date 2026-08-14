@@ -24,7 +24,7 @@ local Iris = {} :: Types.Iris
 
 local Internal: Types.Internal = require(script.Internal)(Iris)
 
-Iris.Version = "0.1.16"
+Iris.Version = "0.1.17"
 function Iris:GetVersion(): string
     return self.Version
 end
