@@ -6561,7 +6561,7 @@ sources[nodes['Iris']] = function(script)
     
     local Internal: Types.Internal = require(script.Internal)(Iris)
     
-    Iris.Version = "0.1.21"
+    Iris.Version = "0.1.22"
     function Iris:GetVersion(): string
         return self.Version
     end
@@ -12225,7 +12225,7 @@ sources[nodes['widgets/Tree']] = function(script)
     
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local TweenService = game:GetService("TweenService")
-        local OpenTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local OpenTweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     
         local abstractTree = {
             hasState = true,

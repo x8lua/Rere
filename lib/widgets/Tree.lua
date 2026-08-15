@@ -2,7 +2,7 @@ local Types = require(script.Parent.Parent.Types)
 
 return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
     local TweenService = game:GetService("TweenService")
-    local OpenTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local OpenTweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
     local abstractTree = {
         hasState = true,
