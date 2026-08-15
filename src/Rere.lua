@@ -6561,7 +6561,7 @@ sources[nodes['Iris']] = function(script)
     
     local Internal: Types.Internal = require(script.Internal)(Iris)
     
-    Iris.Version = "0.1.20"
+    Iris.Version = "0.1.21"
     function Iris:GetVersion(): string
         return self.Version
     end
@@ -12226,8 +12226,6 @@ sources[nodes['widgets/Tree']] = function(script)
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local TweenService = game:GetService("TweenService")
         local OpenTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        local ArrowHalfTweenInfo = TweenInfo.new(0.125, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        local ArrowSquashTweenInfo = TweenInfo.new(0.125, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
     
         local abstractTree = {
             hasState = true,
@@ -12268,29 +12266,15 @@ sources[nodes['widgets/Tree']] = function(script)
                 local Button = Header.Button :: TextButton
                 local ArrowRotationFrame: Frame = Button.ArrowRotationFrame
                 local Arrow: ImageLabel = ArrowRotationFrame.Arrow
-    
-                local TargetImage = if isUncollapsed then widgets.ICONS.DOWN_POINTING_TRIANGLE else widgets.ICONS.RIGHT_POINTING_TRIANGLE
-                local PreviousOpen = ArrowRotationFrame:GetAttribute("TargetOpen")
-                if PreviousOpen == nil then
-                    ArrowRotationFrame:SetAttribute("TargetOpen", isUncollapsed)
-                    ArrowRotationFrame.Rotation = 0
-                    Arrow.Image = TargetImage
-                    Arrow.Size = UDim2.fromScale(1, 1)
-                elseif PreviousOpen ~= isUncollapsed then
-                    ArrowRotationFrame:SetAttribute("TargetOpen", isUncollapsed)
-                    -- Executor UI layers can ignore ImageLabel rotation. This flip animation
-                    -- narrows, changes direction, then expands, so the rotation remains visible.
-                    local Turn = if isUncollapsed then 45 else -45
-                    TweenService:Create(ArrowRotationFrame, ArrowHalfTweenInfo, { Rotation = Turn }):Play()
-                    local Squash = TweenService:Create(Arrow, ArrowSquashTweenInfo, { Size = UDim2.fromScale(0, 1) })
-                    Squash:Play()
-                    Squash.Completed:Once(function()
-                        if ArrowRotationFrame.Parent and ArrowRotationFrame:GetAttribute("TargetOpen") == isUncollapsed then
-                            Arrow.Image = TargetImage
-                            TweenService:Create(ArrowRotationFrame, ArrowHalfTweenInfo, { Rotation = 0 }):Play()
-                            TweenService:Create(Arrow, ArrowHalfTweenInfo, { Size = UDim2.fromScale(1, 1) }):Play()
-                        end
-                    end)
+                local ArrowGlyph: TextLabel = ArrowRotationFrame.ArrowGlyph
+                local TargetRotation = if isUncollapsed then 90 else 0
+                local PreviousRotation = ArrowGlyph:GetAttribute("TargetRotation")
+                if PreviousRotation == nil then
+                    ArrowGlyph:SetAttribute("TargetRotation", TargetRotation)
+                    ArrowGlyph.Rotation = TargetRotation
+                elseif PreviousRotation ~= TargetRotation then
+                    ArrowGlyph:SetAttribute("TargetRotation", TargetRotation)
+                    TweenService:Create(ArrowGlyph, OpenTweenInfo, { Rotation = TargetRotation }):Play()
                 end
                 if isUncollapsed then
                     thisWidget.lastUncollapsedTick = Iris._cycleTick + 1
@@ -12409,6 +12393,19 @@ sources[nodes['widgets/Tree']] = function(script)
     
                     Arrow.Parent = ArrowRotationFrame
     
+                    local ArrowGlyph = Instance.new("TextLabel")
+                    ArrowGlyph.Name = "ArrowGlyph"
+                    ArrowGlyph.AnchorPoint = Vector2.new(0.5, 0.5)
+                    ArrowGlyph.Position = UDim2.fromScale(0.5, 0.5)
+                    ArrowGlyph.Size = UDim2.fromScale(1, 1)
+                    ArrowGlyph.BackgroundTransparency = 1
+                    ArrowGlyph.BorderSizePixel = 0
+                    ArrowGlyph.Text = "▶"
+                    ArrowGlyph.TextColor3 = Iris._config.TextColor
+                    ArrowGlyph.TextTransparency = Iris._config.TextTransparency
+                    ArrowGlyph.TextSize = Iris._config.TextSize
+                    ArrowGlyph.FontFace = Iris._config.TextFont
+                    ArrowGlyph.Parent = ArrowRotationFrame
                     local TextLabel = Instance.new("TextLabel")
                     TextLabel.Name = "TextLabel"
                     TextLabel.AutomaticSize = Enum.AutomaticSize.XY
@@ -12540,6 +12537,19 @@ sources[nodes['widgets/Tree']] = function(script)
     
                     Arrow.Parent = ArrowRotationFrame
     
+                    local ArrowGlyph = Instance.new("TextLabel")
+                    ArrowGlyph.Name = "ArrowGlyph"
+                    ArrowGlyph.AnchorPoint = Vector2.new(0.5, 0.5)
+                    ArrowGlyph.Position = UDim2.fromScale(0.5, 0.5)
+                    ArrowGlyph.Size = UDim2.fromScale(1, 1)
+                    ArrowGlyph.BackgroundTransparency = 1
+                    ArrowGlyph.BorderSizePixel = 0
+                    ArrowGlyph.Text = "▶"
+                    ArrowGlyph.TextColor3 = Iris._config.TextColor
+                    ArrowGlyph.TextTransparency = Iris._config.TextTransparency
+                    ArrowGlyph.TextSize = Iris._config.TextSize
+                    ArrowGlyph.FontFace = Iris._config.TextFont
+                    ArrowGlyph.Parent = ArrowRotationFrame
                     local TextLabel = Instance.new("TextLabel")
                     TextLabel.Name = "TextLabel"
                     TextLabel.AutomaticSize = Enum.AutomaticSize.XY
