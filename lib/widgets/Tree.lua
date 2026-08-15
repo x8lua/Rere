@@ -44,7 +44,9 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local ArrowRotationFrame: Frame = Button.ArrowRotationFrame
             local Arrow: ImageLabel = ArrowRotationFrame.Arrow
 
-            Arrow.Image = widgets.ICONS.RIGHT_POINTING_TRIANGLE
+            -- Some executor UI layers ignore GuiObject.Rotation when rendering ImageLabels.
+            -- Swap the directional asset as a renderer fallback while retaining the tween.
+            Arrow.Image = isUncollapsed and widgets.ICONS.DOWN_POINTING_TRIANGLE or widgets.ICONS.RIGHT_POINTING_TRIANGLE
             local TargetRotation = isUncollapsed and 90 or 0
             if ArrowRotationFrame:GetAttribute("TargetRotation") ~= TargetRotation then
                 ArrowRotationFrame:SetAttribute("TargetRotation", TargetRotation)
