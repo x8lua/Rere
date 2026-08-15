@@ -19,7 +19,7 @@ Windows, menus, tabs, collapsing sections, dropdowns, inputs, sliders, tables, p
 
 1. Follow [Executor setup](getting-started.md).
 2. Copy the [Quickstart](quickstart.md).
-3. Browse [Every element](elements.md).
+3. Browse [Elements overview](elements.md).
 4. Run the [full element example](examples.md).
 
 The source repository is [github.com/x8lua/Rere](https://github.com/x8lua/Rere).

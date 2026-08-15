@@ -11,7 +11,14 @@
 
 ## Elements
 
-* [Every element](elements.md)
+* [Elements overview](elements.md)
+  * [Windows and layout](elements/windows-layout.md)
+  * [Buttons and selection](elements/buttons-selection.md)
+  * [Menus, tabs, and sections](elements/navigation.md)
+  * [Dropdowns and typed inputs](elements/inputs.md)
+  * [Sliders and drag inputs](elements/sliders-drags.md)
+  * [Images, progress, and plots](elements/media-visuals.md)
+  * [Tables and columns](elements/tables.md)
 * [Public API](api.md)
 
 ## Examples
