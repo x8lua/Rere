@@ -31,7 +31,7 @@ Iris:Connect(function()
 end)
 ```
 
-See [`examples/executor_basic.lua`](examples/executor_basic.lua) and the [GitBook docs](docs/gitbook.md) for the executor workflow.
+See [`examples/executor_basic.lua`](examples/executor_basic.lua) and the [GitBook docs](docs/README.md) for the executor workflow.
 
 <div align="center">
     <img src="assets/simpleExampleDark.png" alt="Simple example with dark mode"/>
