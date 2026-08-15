@@ -277,17 +277,22 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
                 Button.Parent = Header
 
+                local ArrowRotationFrame = Instance.new("Frame")
+                ArrowRotationFrame.Name = "ArrowRotationFrame"
+                ArrowRotationFrame.Size = UDim2.fromOffset(Iris._config.TextSize, math.ceil(Iris._config.TextSize * 0.8))
+                ArrowRotationFrame.BackgroundTransparency = 1
+                ArrowRotationFrame.BorderSizePixel = 0
+                ArrowRotationFrame.Parent = Button
                 local Arrow = Instance.new("ImageLabel")
                 Arrow.Name = "Arrow"
-                Arrow.AutomaticSize = Enum.AutomaticSize.Y
-                Arrow.Size = UDim2.fromOffset(Iris._config.TextSize, math.ceil(Iris._config.TextSize * 0.8))
+                Arrow.Size = UDim2.fromScale(1, 1)
                 Arrow.BackgroundTransparency = 1
                 Arrow.BorderSizePixel = 0
                 Arrow.ImageColor3 = Iris._config.TextColor
                 Arrow.ImageTransparency = Iris._config.TextTransparency
                 Arrow.ScaleType = Enum.ScaleType.Fit
 
-                Arrow.Parent = Button
+                Arrow.Parent = ArrowRotationFrame
 
                 local TextLabel = Instance.new("TextLabel")
                 TextLabel.Name = "TextLabel"
