@@ -6561,7 +6561,7 @@ sources[nodes['Iris']] = function(script)
     
     local Internal: Types.Internal = require(script.Internal)(Iris)
     
-    Iris.Version = "0.1.19"
+    Iris.Version = "0.1.20"
     function Iris:GetVersion(): string
         return self.Version
     end
@@ -12226,6 +12226,8 @@ sources[nodes['widgets/Tree']] = function(script)
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local TweenService = game:GetService("TweenService")
         local OpenTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local ArrowHalfTweenInfo = TweenInfo.new(0.125, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local ArrowSquashTweenInfo = TweenInfo.new(0.125, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
     
         local abstractTree = {
             hasState = true,
@@ -12267,13 +12269,28 @@ sources[nodes['widgets/Tree']] = function(script)
                 local ArrowRotationFrame: Frame = Button.ArrowRotationFrame
                 local Arrow: ImageLabel = ArrowRotationFrame.Arrow
     
-                -- Some executor UI layers ignore GuiObject.Rotation when rendering ImageLabels.
-                -- Swap the directional asset as a renderer fallback while retaining the tween.
-                Arrow.Image = isUncollapsed and widgets.ICONS.DOWN_POINTING_TRIANGLE or widgets.ICONS.RIGHT_POINTING_TRIANGLE
-                local TargetRotation = isUncollapsed and 90 or 0
-                if ArrowRotationFrame:GetAttribute("TargetRotation") ~= TargetRotation then
-                    ArrowRotationFrame:SetAttribute("TargetRotation", TargetRotation)
-                    TweenService:Create(ArrowRotationFrame, OpenTweenInfo, { Rotation = TargetRotation }):Play()
+                local TargetImage = if isUncollapsed then widgets.ICONS.DOWN_POINTING_TRIANGLE else widgets.ICONS.RIGHT_POINTING_TRIANGLE
+                local PreviousOpen = ArrowRotationFrame:GetAttribute("TargetOpen")
+                if PreviousOpen == nil then
+                    ArrowRotationFrame:SetAttribute("TargetOpen", isUncollapsed)
+                    ArrowRotationFrame.Rotation = 0
+                    Arrow.Image = TargetImage
+                    Arrow.Size = UDim2.fromScale(1, 1)
+                elseif PreviousOpen ~= isUncollapsed then
+                    ArrowRotationFrame:SetAttribute("TargetOpen", isUncollapsed)
+                    -- Executor UI layers can ignore ImageLabel rotation. This flip animation
+                    -- narrows, changes direction, then expands, so the rotation remains visible.
+                    local Turn = if isUncollapsed then 45 else -45
+                    TweenService:Create(ArrowRotationFrame, ArrowHalfTweenInfo, { Rotation = Turn }):Play()
+                    local Squash = TweenService:Create(Arrow, ArrowSquashTweenInfo, { Size = UDim2.fromScale(0, 1) })
+                    Squash:Play()
+                    Squash.Completed:Once(function()
+                        if ArrowRotationFrame.Parent and ArrowRotationFrame:GetAttribute("TargetOpen") == isUncollapsed then
+                            Arrow.Image = TargetImage
+                            TweenService:Create(ArrowRotationFrame, ArrowHalfTweenInfo, { Rotation = 0 }):Play()
+                            TweenService:Create(Arrow, ArrowHalfTweenInfo, { Size = UDim2.fromScale(1, 1) }):Play()
+                        end
+                    end)
                 end
                 if isUncollapsed then
                     thisWidget.lastUncollapsedTick = Iris._cycleTick + 1
@@ -12381,6 +12398,8 @@ sources[nodes['widgets/Tree']] = function(script)
                     ArrowRotationFrame.Parent = Button
                     local Arrow = Instance.new("ImageLabel")
                     Arrow.Name = "Arrow"
+                    Arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+                    Arrow.Position = UDim2.fromScale(0.5, 0.5)
                     Arrow.Size = UDim2.fromScale(1, 1)
                     Arrow.BackgroundTransparency = 1
                     Arrow.BorderSizePixel = 0
@@ -12510,6 +12529,8 @@ sources[nodes['widgets/Tree']] = function(script)
                     ArrowRotationFrame.Parent = Button
                     local Arrow = Instance.new("ImageLabel")
                     Arrow.Name = "Arrow"
+                    Arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+                    Arrow.Position = UDim2.fromScale(0.5, 0.5)
                     Arrow.Size = UDim2.fromScale(1, 1)
                     Arrow.BackgroundTransparency = 1
                     Arrow.BorderSizePixel = 0
