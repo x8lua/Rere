@@ -151,5 +151,91 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 end
             end,
         } :: Types.WidgetClass)
-    )
+        )
+
+    Iris.WidgetConstructor("ViewportFrame", {
+        hasState = false,
+        hasChildren = false,
+        Args = {
+            ["Size"] = 1,
+            ["Camera"] = 2,
+            ["Model"] = 3,
+            ["BackgroundColor"] = 4,
+            ["BackgroundTransparency"] = 5,
+            ["Ambient"] = 6,
+            ["LightColor"] = 7,
+            ["LightDirection"] = 8,
+        },
+        Events = {
+            ["hovered"] = widgets.EVENTS.hover(function(thisWidget: Types.Widget)
+                return thisWidget.Instance
+            end),
+        },
+        Generate = function(_thisWidget: Types.ViewportFrame)
+            local Viewport = Instance.new("ViewportFrame")
+            Viewport.Name = "Iris_ViewportFrame"
+            Viewport.BorderSizePixel = 0
+            Viewport.ClipsDescendants = true
+            widgets.applyFrameStyle(Viewport, true)
+            return Viewport
+        end,
+        Update = function(thisWidget: Types.ViewportFrame)
+            local Viewport = thisWidget.Instance :: ViewportFrame
+            local arguments = thisWidget.arguments
+
+            Viewport.Size = arguments.Size or UDim2.fromOffset(240, 180)
+            Viewport.BackgroundColor3 = arguments.BackgroundColor or Iris._config.FrameBgColor
+            Viewport.BackgroundTransparency = arguments.BackgroundTransparency
+                or Iris._config.FrameBgTransparency
+            Viewport.Ambient = arguments.Ambient or Color3.fromRGB(200, 200, 200)
+            Viewport.LightColor = arguments.LightColor or Color3.new(1, 1, 1)
+            Viewport.LightDirection = arguments.LightDirection or Vector3.new(-1, -1, -1)
+
+            for _, child in Viewport:GetChildren() do
+                if child:GetAttribute("RereViewportContent") then
+                    child:Destroy()
+                end
+            end
+
+            local model = arguments.Model
+            local worldModel
+            if model then
+                worldModel = Instance.new("WorldModel")
+                worldModel.Name = "WorldModel"
+                worldModel:SetAttribute("RereViewportContent", true)
+                local clone = model:Clone()
+                if clone:IsA("WorldModel") then
+                    for _, child in clone:GetChildren() do
+                        child.Parent = worldModel
+                    end
+                    clone:Destroy()
+                else
+                    clone.Parent = worldModel
+                end
+                worldModel.Parent = Viewport
+            end
+
+            local camera = arguments.Camera
+            if camera or worldModel then
+                local cameraClone = camera and camera:Clone() or Instance.new("Camera")
+                cameraClone.Name = "Camera"
+                cameraClone:SetAttribute("RereViewportContent", true)
+                cameraClone.Parent = Viewport
+
+                if not camera and worldModel then
+                    local center, size = worldModel:GetBoundingBox()
+                    local radius = math.max(size.X, size.Y, size.Z, 1)
+                    local target = center.Position
+                    cameraClone.CFrame = CFrame.lookAt(target + Vector3.new(radius, radius * 0.65, radius), target)
+                end
+
+                Viewport.CurrentCamera = cameraClone
+            else
+                Viewport.CurrentCamera = nil
+            end
+        end,
+        Discard = function(thisWidget: Types.ViewportFrame)
+            thisWidget.Instance:Destroy()
+        end,
+    } :: Types.WidgetClass)
 end

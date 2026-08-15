@@ -62,7 +62,7 @@ for (const file of files.sort()) {
   const source = fs.readFileSync(file, "utf8").replace(/\r\n/g, "\n");
   lines.push(`sources[nodes['${key}']] = function(script)`);
   lines.push("    local require = requireModule");
-  lines.push(source.split("\n").map((line) => `    ${line}`).join("\n"));
+  lines.push(source.split("\n").map((line) => line.length > 0 ? `    ${line}` : "").join("\n"));
   lines.push("end");
 }
 

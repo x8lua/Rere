@@ -22,6 +22,7 @@ export type Checkbox = Types.Checkbox
 export type RadioButton = Types.RadioButton
 export type Image = Types.Image
 export type ImageButton = Types.ImageButton
+export type ViewportFrame = Types.ViewportFrame
 export type Tree = Types.Tree
 export type CollapsingHeader = Types.CollapsingHeader
 export type TabBar = Types.TabBar

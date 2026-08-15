@@ -300,6 +300,19 @@ export type Image = Widget & {
 -- let's just hope I don't have to use a Roblox ImageButton type anywhere by name in this file
 export type ImageButton = Image & Clicked & RightClicked & DoubleClicked & CtrlClicked
 
+export type ViewportFrame = Widget & {
+    arguments: {
+        Size: UDim2?,
+        Camera: Camera?,
+        Model: Model | BasePart | WorldModel?,
+        BackgroundColor: Color3?,
+        BackgroundTransparency: number?,
+        Ambient: Color3?,
+        LightColor: Color3?,
+        LightDirection: Vector3?,
+    },
+} & Hovered
+
 -- Tree
 
 export type Tree = CollapsingHeader & {

@@ -723,6 +723,23 @@ return function(Iris: Types.Iris)
     ]=]
     Iris.ImageButton = wrapper("ImageButton")
 
+    --[=[
+        @within Image
+        @prop ViewportFrame Iris.ViewportFrame
+        @tag Widget
+
+        Displays a cloned model or part with an optional cloned camera inside a Roblox ViewportFrame.
+
+        ```lua
+        Iris.ViewportFrame({
+            UDim2.fromOffset(240, 180),
+            camera,
+            model,
+        })
+        ```
+    ]=]
+    Iris.ViewportFrame = wrapper("ViewportFrame")
+
     --[[
         ---------------------------------
             [SECTION] Tree Widget API

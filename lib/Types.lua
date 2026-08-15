@@ -43,6 +43,7 @@ export type Checkbox = WidgetTypes.Checkbox
 export type RadioButton = WidgetTypes.RadioButton
 export type Image = WidgetTypes.Image
 export type ImageButton = WidgetTypes.ImageButton
+export type ViewportFrame = WidgetTypes.ViewportFrame
 export type Tree = WidgetTypes.Tree
 export type CollapsingHeader = WidgetTypes.CollapsingHeader
 export type TabBar = WidgetTypes.TabBar
@@ -595,6 +596,7 @@ export type Iris = {
 
     Image: WidgetCall<Image, WidgetArguments, nil>,
     ImageButton: WidgetCall<ImageButton, WidgetArguments, nil>,
+    ViewportFrame: WidgetCall<ViewportFrame, WidgetArguments, nil>,
 
     -- Table Widget Api
     Table: WidgetCall<Table, WidgetArguments, WidgetStates?>,
