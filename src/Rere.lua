@@ -13166,11 +13166,6 @@ sources[nodes['widgets/Window']] = function(script)
                     if thisWidget.state.isUncollapsed.value then
                         Iris.SetFocusedWindow(thisWidget)
                     end
-                    if not thisWidget.arguments.NoMove and input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        dragWindow = thisWidget
-                        isDragging = true
-                        moveDeltaCursorPosition = widgets.getMouseLocation() - thisWidget.state.position.value
-                    end
                 end)
 
                 local Content = Instance.new("Frame")
@@ -13253,12 +13248,14 @@ sources[nodes['widgets/Window']] = function(script)
                 widgets.UIPadding(TitleBar, Vector2.new(Iris._config.FramePadding.X))
                 widgets.UIListLayout(TitleBar, Enum.FillDirection.Horizontal, UDim.new(0, Iris._config.ItemInnerSpacing.X)).VerticalAlignment = Enum.VerticalAlignment.Center
                 widgets.applyInputBegan(TitleBar, function(input)
-                    if input.UserInputType == Enum.UserInputType.Touch then
-                        if not thisWidget.arguments.NoMove then
-                            dragWindow = thisWidget
-                            isDragging = true
+                    if not thisWidget.arguments.NoMove then
+                        dragWindow = thisWidget
+                        isDragging = true
+                        if input.UserInputType == Enum.UserInputType.Touch then
                             local location = input.Position
                             moveDeltaCursorPosition = Vector2.new(location.X, location.Y) - thisWidget.state.position.value
+                        else
+                            moveDeltaCursorPosition = widgets.getMouseLocation() - thisWidget.state.position.value
                         end
                     end
                 end)
