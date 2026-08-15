@@ -230,6 +230,25 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             quickSwapWindows()
         end
 
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            local position = if input.UserInputType == Enum.UserInputType.Touch
+                then Vector2.new(input.Position.X, input.Position.Y)
+                else widgets.getMouseLocation()
+
+            for _, window in windowWidgets do
+                local Window = window.Instance
+                if Window and not window.arguments.NoMove then
+                    local TitleBar = Window.WindowButton.Content:FindFirstChild("TitleBar")
+                    if TitleBar and widgets.isPosInsideRect(position, TitleBar.AbsolutePosition - widgets.GuiOffset, TitleBar.AbsolutePosition - widgets.GuiOffset + TitleBar.AbsoluteSize) then
+                        dragWindow = window
+                        isDragging = true
+                        moveDeltaCursorPosition = position - window.state.position.value
+                        break
+                    end
+                end
+            end
+        end
+
         if input.UserInputType == Enum.UserInputType.MouseButton1 and isInsideResize and not isInsideWindow and anyFocusedWindow and focusedWindow then
             local midWindow = focusedWindow.state.position.value + (focusedWindow.state.size.value / 2)
             local cursorPosition = widgets.getMouseLocation() - midWindow
@@ -515,19 +534,6 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
             widgets.UIPadding(TitleBar, Vector2.new(Iris._config.FramePadding.X))
             widgets.UIListLayout(TitleBar, Enum.FillDirection.Horizontal, UDim.new(0, Iris._config.ItemInnerSpacing.X)).VerticalAlignment = Enum.VerticalAlignment.Center
-            widgets.applyInputBegan(TitleBar, function(input)
-                if not thisWidget.arguments.NoMove then
-                    dragWindow = thisWidget
-                    isDragging = true
-                    if input.UserInputType == Enum.UserInputType.Touch then
-                        local location = input.Position
-                        moveDeltaCursorPosition = Vector2.new(location.X, location.Y) - thisWidget.state.position.value
-                    else
-                        moveDeltaCursorPosition = widgets.getMouseLocation() - thisWidget.state.position.value
-                    end
-                end
-            end)
-
             local TitleButtonSize = Iris._config.TextSize + ((Iris._config.FramePadding.Y - 1) * 2)
 
             local CollapseButton = Instance.new("TextButton")
