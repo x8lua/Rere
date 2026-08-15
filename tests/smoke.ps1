@@ -2,8 +2,9 @@ $source = Get-Content "$PSScriptRoot\..\src\Rere.lua" -Raw
 foreach ($marker in @("local function requireModule", "return requireModule(nodes['Iris'])", "Rere executor distribution", "resolveExecutorParent")) {
     if (-not $source.Contains($marker)) { throw "Missing bundle marker: $marker" }
 }
-if (-not $source.Contains('Iris.Version = "0.1.23"')) { throw "Bundle version is not 0.1.23" }
-if (-not $source.Contains('local OpenTweenInfo = TweenInfo.new(0.15')) { throw "Dropdown duration is not 0.15 seconds" }
+if (-not $source.Contains('Iris.Version = "0.1.24"')) { throw "Bundle version is not 0.1.24" }
+if ([regex]::Matches($source, 'local OpenTweenInfo = TweenInfo.new\(0.1').Count -ne 2) { throw "Combo and section durations must both be 0.1 seconds" }
+if (-not $source.Contains('local TargetRotation = if IsOpened then 90 else 0')) { throw "Missing Combo arrow direction state" }
 if ([regex]::Matches($source, 'ArrowGlyph\.Rotation = TargetRotation').Count -ne 1) { throw "Missing arrow glyph rotation initialization" }
 if ([regex]::Matches($source, 'TweenService:Create\(ArrowGlyph, OpenTweenInfo, \{ Rotation = TargetRotation \}\):Play\(\)').Count -ne 1) { throw "Missing arrow glyph rotation tween" }
 if (-not $source.Contains("function Iris:GetVersion(): string")) { throw "Missing GetVersion API" }

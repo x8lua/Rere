@@ -2,7 +2,7 @@ local Types = require(script.Parent.Parent.Types)
 
 return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
     local TweenService = game:GetService("TweenService")
-    local OpenTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local OpenTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     --stylua: ignore
     Iris.WidgetConstructor("Selectable", {
         hasState = true,
@@ -302,15 +302,18 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local padding = math.round(frameHeight * 0.2)
             local dropdownSize = frameHeight - 2 * padding
 
-            local Dropdown = Instance.new("ImageLabel")
+            local Dropdown = Instance.new("TextLabel")
             Dropdown.Name = "Dropdown"
             Dropdown.AnchorPoint = Vector2.new(0.5, 0.5)
             Dropdown.Size = UDim2.fromOffset(dropdownSize, dropdownSize)
             Dropdown.Position = UDim2.fromScale(0.5, 0.5)
             Dropdown.BackgroundTransparency = 1
             Dropdown.BorderSizePixel = 0
-            Dropdown.ImageColor3 = Iris._config.TextColor
-            Dropdown.ImageTransparency = Iris._config.TextTransparency
+            Dropdown.Text = "▶"
+            Dropdown.TextColor3 = Iris._config.TextColor
+            Dropdown.TextTransparency = Iris._config.TextTransparency
+            Dropdown.TextSize = Iris._config.TextSize
+            Dropdown.FontFace = Iris._config.TextFont
 
             Dropdown.Parent = DropdownButton
 
@@ -454,24 +457,35 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local PreviewContainer = Combo.PreviewContainer :: TextButton
             local PreviewLabel: TextLabel = PreviewContainer.PreviewLabel
             local DropdownButton = PreviewContainer.DropdownButton :: TextLabel
-            local Dropdown: ImageLabel = DropdownButton.Dropdown
+            local Dropdown: TextLabel = DropdownButton.Dropdown
+            local IsOpened = thisWidget.state.isOpened.value
+            local TargetRotation = if IsOpened then 90 else 0
+            local PreviousRotation = Dropdown:GetAttribute("TargetRotation")
+            local PreviousOpen = ChildContainer:GetAttribute("TargetOpen")
+            local OpenStateChanged = PreviousOpen ~= nil and PreviousOpen ~= IsOpened
+            ChildContainer:SetAttribute("TargetOpen", IsOpened)
+            if PreviousRotation == nil then
+                Dropdown:SetAttribute("TargetRotation", TargetRotation)
+                Dropdown.Rotation = TargetRotation
+            elseif PreviousRotation ~= TargetRotation then
+                Dropdown:SetAttribute("TargetRotation", TargetRotation)
+                TweenService:Create(Dropdown, OpenTweenInfo, { Rotation = TargetRotation }):Play()
+            end
 
-            if thisWidget.state.isOpened.value then
+            if IsOpened then
                 AnyOpenedCombo = true
                 OpenedCombo = thisWidget
                 ComboOpenedTick = Iris._cycleTick
                 thisWidget.lastOpenedTick = Iris._cycleTick + 1
 
-                -- ImGui also does not do this, and the Arrow is always facing down
-                Dropdown.Image = widgets.ICONS.RIGHT_POINTING_TRIANGLE
-                local ShouldAnimate = not ChildContainer.Visible
-                ChildContainer.Visible = true
-
                 UpdateChildContainerTransform(thisWidget)
-                if ShouldAnimate then
+                if OpenStateChanged then
                     local TargetSize = ChildContainer.Size
                     ChildContainer.Size = UDim2.new(TargetSize.X, UDim.new(0, 0))
+                    ChildContainer.Visible = true
                     TweenService:Create(ChildContainer, OpenTweenInfo, { Size = TargetSize }):Play()
+                else
+                    ChildContainer.Visible = true
                 end
             else
                 if AnyOpenedCombo then
@@ -479,8 +493,21 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                     OpenedCombo = nil
                     thisWidget.lastClosedTick = Iris._cycleTick + 1
                 end
-                Dropdown.Image = widgets.ICONS.DOWN_POINTING_TRIANGLE
-                ChildContainer.Visible = false
+                if OpenStateChanged and ChildContainer.Visible then
+                    local OpenSize = ChildContainer.Size
+                    local CloseTween = TweenService:Create(ChildContainer, OpenTweenInfo, {
+                        Size = UDim2.new(OpenSize.X, UDim.new(0, 0)),
+                    })
+                    CloseTween:Play()
+                    CloseTween.Completed:Once(function()
+                        if ChildContainer.Parent and ChildContainer:GetAttribute("TargetOpen") == false then
+                            ChildContainer.Visible = false
+                            ChildContainer.Size = OpenSize
+                        end
+                    end)
+                elseif PreviousOpen == nil then
+                    ChildContainer.Visible = false
+                end
             end
 
             local stateIndex = thisWidget.state.index.value
