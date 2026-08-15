@@ -2,7 +2,7 @@ $source = Get-Content "$PSScriptRoot\..\src\Rere.lua" -Raw
 foreach ($marker in @("local function requireModule", "return requireModule(nodes['Iris'])", "Rere executor distribution", "resolveExecutorParent")) {
     if (-not $source.Contains($marker)) { throw "Missing bundle marker: $marker" }
 }
-if (-not $source.Contains('Iris.Version = "0.1.22"')) { throw "Bundle version is not 0.1.22" }
+if (-not $source.Contains('Iris.Version = "0.1.23"')) { throw "Bundle version is not 0.1.23" }
 if (-not $source.Contains('local OpenTweenInfo = TweenInfo.new(0.15')) { throw "Dropdown duration is not 0.15 seconds" }
 if ([regex]::Matches($source, 'ArrowGlyph\.Rotation = TargetRotation').Count -ne 1) { throw "Missing arrow glyph rotation initialization" }
 if ([regex]::Matches($source, 'TweenService:Create\(ArrowGlyph, OpenTweenInfo, \{ Rotation = TargetRotation \}\):Play\(\)').Count -ne 1) { throw "Missing arrow glyph rotation tween" }
