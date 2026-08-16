@@ -7,7 +7,7 @@
 1. Run the complete Lua file in an executor connected to the target client.
 2. Confirm the `Auto Parry Debugger` window appears.
 3. Watch `Dashboard > Triggers` while another player attacks nearby.
-4. Tune `Radius`, `Hold time`, and `Heavy delay` under `Controls`.
+4. Tune `Radius`, `Hold time`, and `Timing scale` under `Controls`.
 5. Press `H` to toggle the controller without closing the window.
 
 The file is self-contained and does not require inserting a ModuleScript into the game. Re-running it first stops the previous `_G.__CodexAutoParry` instance, preventing duplicate listeners.
@@ -16,7 +16,7 @@ The file is self-contained and does not require inserting a ModuleScript into th
 
 ### Detection
 
-The controller subscribes to each other player's `Humanoid.Animator.AnimationPlayed` signal and accepts only these known attack IDs: `83491849294956`, `89420531853362`, `83730275893449`, `106980660082799`, and heavy punch `78888626472394`. Walking and unrelated Action-priority animations are excluded by construction. It then checks:
+At startup, the controller scans every `Animation` below `ReplicatedStorage.Animations.Combat`. Exact names `1stM1`, `2ndM1`, `3rdM1`, and `4thM1` are classified as M1 attacks; exact name `M2` is classified as M2. The current game contains 65 matching animations across its combat-style folders. `DescendantAdded` keeps the ID map current when another matching animation appears. Walking and unrelated animations are excluded by construction. It then checks:
 
 - local and target Humanoids are alive;
 - both characters have a `HumanoidRootPart`;
@@ -30,7 +30,22 @@ The script resolves `ReplicatedStorage.CombatSystemClient.Combat.<CombatType>.Bl
 
 ### Rapid punches, heavy timing, and observability
 
-Normal punches begin blocking immediately. Heavy punch waits `0.40` seconds after its animation begins. All punches share one block pulse: a new rapid punch extends `BlockingUntil`, so an older timer cannot release block during a newer attack. Every accepted detection increments `TriggerCount` and records attack type, target, distance, and delay.
+M1 and M2 use the per-class values in the combat windup table. At `1x` speed, Basic M1 is `0.352s` and Basic M2 is `0.537s`; the other classes use their own combo values. Runtime delay is `windup / track.Speed * TimingScale`. All attacks share one block pulse: a new rapid punch extends `BlockingUntil`, so an older timer cannot release block during a newer attack. Every accepted detection increments `TriggerCount` and records combat style, attack name, target, distance, speed, and delay.
+
+| Class | M1 #1 | M1 #2 | M1 #3 | M1 #4 | M2 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Ali | 0.292 | 0.382 | 0.432 | 0.232 | 0.542 |
+| Basic | 0.352 | 0.352 | 0.352 | 0.352 | 0.537 |
+| Boxing | 0.352 | 0.352 | 0.352 | 0.392 | 0.442 |
+| Capoeira | 0.362 | 0.442 | 0.362 | 0.292 | 0.462 |
+| Hakari | 0.362 | 0.382 | 0.292 | 0.392 | 0.362 |
+| Karate | 0.2895 | 0.327 | 0.402 | 0.477 | 0.4995 |
+| Kure | 0.332 | 0.332 | 0.332 | 0.332 | 0.312 |
+| MuayThai | 0.312 | 0.312 | 0.312 | 0.312 | 0.612 |
+| Slugger | 0.512 | 0.462 | 0.462 | 0.382 | 0.832 |
+| Striker | 0.362 | 0.362 | 0.242 | 0.132 | 0.462 |
+| WingChun | 0.312 | 0.312 | 0.312 | 0.712 | 0.537 |
+| Wrestling | 0.372 | 0.382 | 0.372 | 0.362 | 0.537 |
 
 ## Debug page
 
@@ -40,7 +55,7 @@ Shows enabled state, detection trigger count, accepted and rejected block counts
 
 ### Controls
 
-`Enabled` mirrors the controller state. `Radius` ranges from 2 to 30 studs. `Hold time` ranges from 0.05 to 0.60 seconds and controls how far every rapid punch extends the shared pulse. `Heavy delay` defaults to 0.40 seconds. `Stop and disconnect` calls `controller.Stop()`, disconnects all listeners, and releases block.
+`Enabled` mirrors the controller state. `Radius` ranges from 2 to 30 studs. `Hold time` ranges from 0.05 to 0.60 seconds and controls how far every rapid punch extends the shared pulse. `Timing scale` defaults to `1.0x`; lower values react earlier and higher values react later. `Stop and disconnect` calls `controller.Stop()`, disconnects all listeners, and releases block.
 
 ### Event log
 
@@ -58,7 +73,7 @@ The page repeats the detection, block, and rollback stages in execution order so
 | Listener count is zero | Other characters have loaded `Humanoid.Animator` instances | Wait for respawn or rejoin; `CharacterAdded` is handled automatically |
 | Trigger count stays zero | Target is outside radius, facing away, or using non-Action priority | Increase radius temporarily and inspect target animation IDs |
 | Triggers rise but accepted blocks do not | The game is rejecting block because of equip, stun, cooldown, guard break, or another combat state | Read `Last block state`; compare with a manual `F` block in the same state |
-| Walking triggers a reaction | Running source predates the exact animation allowlist | Reload the current example; only the five documented IDs are accepted |
+| Walking triggers a reaction | Running source predates folder-based classification | Reload the current example; only exact `1stM1`-`4thM1` and `M2` names are accepted |
 | Block errors appear | Combat type folder or `Block` module is missing | Read `Last error` and inspect `PlayerData.CombatType` |
 | Rapid punches interrupt each other | Running source predates the shared block pulse | Reload the current example and confirm `BLOCK extended` appears in the log |
 | Controller remains active | Listeners were not disconnected | Press `H` or run `_G.__CodexAutoParry.Stop()` |

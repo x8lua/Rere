@@ -16,7 +16,8 @@ local LocalPlayer = Players.LocalPlayer
 if _G.__CodexAutoParry and _G.__CodexAutoParry.Stop then _G.__CodexAutoParry.Stop() end
 
 local controller = {
-    Enabled = true, Radius = 14, HoldTime = 0.24, HeavyDelay = 0.4,
+    Enabled = true, Radius = 14, HoldTime = 0.24,
+    TimingScale = 1, KnownAnimations = 0,
     TriggerCount = 0, SuccessfulBlocks = 0, RejectedBlocks = 0,
     Connections = {}, BlockingUntil = 0, PulseActive = false,
     LastBlockState = "Never attempted",
@@ -56,13 +57,43 @@ local function canReact(enemyCharacter)
     end
     return true, offset.Magnitude
 end
-local attackAnimations = {
-    ["83491849294956"] = {Name = "Punch 1", Delay = 0},
-    ["89420531853362"] = {Name = "Punch 2", Delay = 0},
-    ["83730275893449"] = {Name = "Punch 3", Delay = 0},
-    ["106980660082799"] = {Name = "Punch 4", Delay = 0},
-    ["78888626472394"] = {Name = "Heavy punch", Heavy = true},
+local attackAnimations = {}
+local windups = {
+    Ali = {M1 = {0.292, 0.382, 0.432, 0.232}, M2 = 0.542},
+    Basic = {M1 = {0.352, 0.352, 0.352, 0.352}, M2 = 0.537},
+    Boxing = {M1 = {0.352, 0.352, 0.352, 0.392}, M2 = 0.442},
+    Capoeira = {M1 = {0.362, 0.442, 0.362, 0.292}, M2 = 0.462},
+    Hakari = {M1 = {0.362, 0.382, 0.292, 0.392}, M2 = 0.362},
+    Karate = {M1 = {0.2895, 0.327, 0.402, 0.477}, M2 = 0.4995},
+    Kure = {M1 = {0.332, 0.332, 0.332, 0.332}, M2 = 0.312},
+    MuayThai = {M1 = {0.312, 0.312, 0.312, 0.312}, M2 = 0.612},
+    Slugger = {M1 = {0.512, 0.462, 0.462, 0.382}, M2 = 0.832},
+    Striker = {M1 = {0.362, 0.362, 0.242, 0.132}, M2 = 0.462},
+    WingChun = {M1 = {0.312, 0.312, 0.312, 0.712}, M2 = 0.537},
+    Wrestling = {M1 = {0.372, 0.382, 0.372, 0.362}, M2 = 0.537},
 }
+local function classifyAnimation(animation)
+    if not animation:IsA("Animation") then return end
+    local isLight = animation.Name == "1stM1" or animation.Name == "2ndM1"
+        or animation.Name == "3rdM1" or animation.Name == "4thM1"
+    local isHeavy = animation.Name == "M2"
+    if not isLight and not isHeavy then return end
+    local numericId = string.match(animation.AnimationId, "%d+")
+    if not numericId then return end
+    local class = string.gsub(animation.Parent.Name, "Anims$", "")
+    local comboIndex = tonumber(string.match(animation.Name, "^(%d+)"))
+    local timing = windups[class]
+    local windup = isHeavy and timing and timing.M2 or timing and timing.M1[comboIndex]
+    windup = windup or (isHeavy and 0.537 or 0.352)
+    if not attackAnimations[numericId] then controller.KnownAnimations += 1 end
+    attackAnimations[numericId] = {
+        Name = string.format("%s.%s", class, isHeavy and "M2" or "M1"),
+        Class = class, ComboIndex = comboIndex, Heavy = isHeavy, Windup = windup,
+    }
+end
+local combatAnimations = ReplicatedStorage:WaitForChild("Animations"):WaitForChild("Combat")
+for _, animation in ipairs(combatAnimations:GetDescendants()) do classifyAnimation(animation) end
+table.insert(controller.Connections, combatAnimations.DescendantAdded:Connect(classifyAnimation))
 local function startOrExtendBlockPulse()
     controller.BlockingUntil = math.max(controller.BlockingUntil, os.clock() + controller.HoldTime)
     if controller.PulseActive then
@@ -106,14 +137,15 @@ local function startOrExtendBlockPulse()
         end
     end)
 end
-local function parry(enemyCharacter, animationId, attack)
+local function parry(enemyCharacter, animationId, attack, speed)
     local allowed, distance = canReact(enemyCharacter)
     if not allowed then return end
     controller.LastAnimation = animationId or ""
     controller.LastTarget = enemyCharacter.Name
     controller.TriggerCount += 1
-    local delay = attack.Heavy and controller.HeavyDelay or attack.Delay
-    logEvent(string.format("PARRY #%d %s target=%s distance=%.1f delay=%.2f", controller.TriggerCount, attack.Name, enemyCharacter.Name, distance, delay))
+    speed = math.max(math.abs(speed or 1), 0.05)
+    local delay = attack.Windup / speed * controller.TimingScale
+    logEvent(string.format("PARRY #%d %s target=%s distance=%.1f delay=%.3f speed=%.2f", controller.TriggerCount, attack.Name, enemyCharacter.Name, distance, delay, speed))
     task.spawn(function()
         if delay > 0 then task.wait(delay) end
         local stillAllowed = canReact(enemyCharacter)
@@ -133,7 +165,7 @@ local function watchCharacter(character)
             local numericId = string.match(animationId, "%d+")
             local attack = numericId and attackAnimations[numericId]
             if not attack then return end
-            parry(character, animationId, attack)
+            parry(character, animationId, attack, track.Speed)
         end))
     end)
 end
@@ -166,10 +198,12 @@ logEvent("START listeners=" .. tostring(#controller.Connections))
 
 enabledState = Rere.State(true)
 local enabled, radius = enabledState, Rere.State(14)
-local holdTime, heavyDelay, filter = Rere.State(0.24), Rere.State(0.4), Rere.State("")
+local holdTime = Rere.State(0.24)
+local timingScale, filter = Rere.State(1), Rere.State("")
 Rere:Connect(function()
     controller.Enabled, controller.Radius = enabled:get(), radius:get()
-    controller.HoldTime, controller.HeavyDelay = holdTime:get(), heavyDelay:get()
+    controller.HoldTime = holdTime:get()
+    controller.TimingScale = timingScale:get()
     Rere.Window({"Auto Parry Debugger"})
         Rere.TabBar()
             Rere.Tab({"Dashboard"})
@@ -180,6 +214,7 @@ Rere:Connect(function()
                 Rere.Text({"Listeners: " .. #controller.Connections})
                 Rere.Text({"Last block state: " .. controller.LastBlockState})
                 Rere.Text({"Pulse active: " .. tostring(controller.PulseActive)})
+                Rere.Text({"Known attack animations: " .. controller.KnownAnimations})
                 Rere.Text({"Last target: " .. (controller.LastTarget ~= "" and controller.LastTarget or "None")})
                 Rere.Text({"Last animation: " .. (controller.LastAnimation ~= "" and controller.LastAnimation or "None")})
                 Rere.Text({"Last error: " .. (controller.LastError ~= "" and controller.LastError or "None")})
@@ -191,7 +226,7 @@ Rere:Connect(function()
                 Rere.Checkbox({"Enabled"}, {isChecked = enabled})
                 Rere.SliderNum({"Radius", 0.5, 2, 30, "%.1f studs"}, {number = radius})
                 Rere.SliderNum({"Hold time", 0.01, 0.05, 0.6, "%.2f s"}, {number = holdTime})
-                Rere.SliderNum({"Heavy delay", 0.01, 0, 0.8, "%.2f s"}, {number = heavyDelay})
+                Rere.SliderNum({"Timing scale", 0.01, 0.5, 1.5, "%.2fx"}, {number = timingScale})
                 if Rere.Button({"Stop and disconnect"}).clicked() then controller.Stop() end
                 Rere.Text({"Press H to toggle enabled state."})
             Rere.End()
@@ -207,8 +242,8 @@ Rere:Connect(function()
             Rere.End()
             Rere.Tab({"Diagnostics"})
                 Rere.CollapsingHeader({"Detection pipeline"})
-                    Rere.Text({"Animator.AnimationPlayed -> exact punch ID allowlist -> range/facing/state checks."})
-                    Rere.Text({"Heavy punch waits 0.40s; rapid punches extend one shared block pulse."})
+                    Rere.Text({"Combat descendants named 1stM1-4thM1 or M2 -> ID map -> range/facing/state checks."})
+                    Rere.Text({"Per-class M1/M2 windups divide by observed track speed."})
                 Rere.End()
                 Rere.CollapsingHeader({"Block pipeline"})
                     Rere.Text({"Resolve CombatType Block module -> set Block.Activated credit -> Block() -> hold -> Unblock()."})
