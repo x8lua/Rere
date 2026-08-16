@@ -33,6 +33,8 @@ end)
 
 See [`examples/executor_basic.lua`](examples/executor_basic.lua) and the [GitBook docs](docs/README.md) for the executor workflow.
 
+The complete Rere auto-parry integration and debug UI are available in [`examples/auto_parry_debug.lua`](examples/auto_parry_debug.lua). See the [auto-parry debugger guide](docs/auto-parry-debug.md) for the detection pipeline, controls, event log, troubleshooting matrix, and rollback procedure.
+
 <div align="center">
     <img src="assets/simpleExampleDark.png" alt="Simple example with dark mode"/>
 </div>

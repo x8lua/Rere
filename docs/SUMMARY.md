@@ -27,6 +27,8 @@
 * [Basic executor](../examples/executor_basic.lua)
 * [Settings demo](../examples/settings_demo.lua)
 * [Feature demo](../examples/feature_demo.lua)
+* [Auto parry debugger](auto-parry-debug.md)
+* [Auto parry debugger example](../examples/auto_parry_debug.lua)
 
 ## Support
 
