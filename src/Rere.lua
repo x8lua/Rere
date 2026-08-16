@@ -13074,7 +13074,8 @@ sources[nodes['widgets/Window']] = function(script)
             if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and isResizing and resizeWindow then
                 local Window = resizeWindow.Instance :: Instance
                 isResizing = false
-                resizeWindow.state.size:set(Window.WindowButton.AbsoluteSize)
+                local resizeInstance: TextButton = Window.WindowButton
+                resizeWindow.state.size:set(Vector2.new(resizeInstance.Size.X.Offset, resizeInstance.Size.Y.Offset))
             end
 
             if input.KeyCode == Enum.KeyCode.ButtonX then
