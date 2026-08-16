@@ -21,7 +21,7 @@ local controller = {
     TriggerCount = 0, SuccessfulBlocks = 0, RejectedBlocks = 0,
     Connections = {}, BlockingUntil = 0, PulseActive = false,
     LastBlockState = "Never attempted",
-    LastAnimation = "", LastTarget = "", LastError = "", Events = {},
+    LastRejectReason = "", LastAnimation = "", LastTarget = "", LastError = "", Events = {},
 }
 local function logEvent(message)
     table.insert(controller.Events, 1, os.date("%H:%M:%S") .. "  " .. message)
@@ -39,6 +39,41 @@ local function getBlockModule()
     local ok, module = pcall(require, script)
     if not ok then return nil, tostring(module) end
     return module
+end
+local function releaseM1Hold()
+    local character = LocalPlayer.Character
+    local data = character and character:FindFirstChild("PlayerData")
+    local combatType = data and data:GetAttribute("CombatType") or "Base"
+    local combat = ReplicatedStorage:FindFirstChild("CombatSystemClient")
+    combat = combat and combat:FindFirstChild("Combat")
+    local folder = combat and (combat:FindFirstChild(combatType) or combat:FindFirstChild("Base"))
+    local script = folder and folder:FindFirstChild("M1")
+    if not script then return end
+    local ok, module = pcall(require, script)
+    if ok and typeof(module.Hold) == "function" then pcall(module.Hold, "Stop") end
+end
+local function getBlockRejectReasons(character)
+    if not character then return "Character missing" end
+    local reasons = {}
+    local expected = {
+        Equip = true, Ragdoll = false, GuardBroken = false, Downed = false,
+        SpecTimeSlowed = false, Grappling = false, CantAnything = false,
+        Stunned = false, Greenzone = false, RpCombatLocked = false,
+        StaffModPeaceMode = false,
+    }
+    for attribute, wanted in pairs(expected) do
+        local value = character:GetAttribute(attribute)
+        if (wanted and value ~= true) or (not wanted and value == true) then
+            table.insert(reasons, attribute .. "=" .. tostring(value))
+        end
+    end
+    local states = character:FindFirstChild("States")
+    for _, name in ipairs({"BeingCarried", "BeingGripped"}) do
+        local state = states and states:FindFirstChild(name)
+        if state and state:IsA("ObjectValue") and state.Value then table.insert(reasons, name) end
+    end
+    table.sort(reasons)
+    return #reasons > 0 and table.concat(reasons, ", ") or "module cooldown or attack recovery"
 end
 local function canReact(enemyCharacter)
     if not controller.Enabled then return false end
@@ -133,7 +168,8 @@ local function startOrExtendBlockPulse()
         else
             controller.RejectedBlocks += 1
             controller.LastBlockState = "Rejected by game state"
-            logEvent("BLOCK rejected: Blocking attribute never became true")
+            controller.LastRejectReason = getBlockRejectReasons(character)
+            logEvent("BLOCK rejected: " .. controller.LastRejectReason)
         end
     end)
 end
@@ -143,6 +179,7 @@ local function parry(enemyCharacter, animationId, attack, speed)
     controller.LastAnimation = animationId or ""
     controller.LastTarget = enemyCharacter.Name
     controller.TriggerCount += 1
+    releaseM1Hold()
     speed = math.max(math.abs(speed or 1), 0.05)
     local delay = attack.Windup / speed * controller.TimingScale
     logEvent(string.format("PARRY #%d %s target=%s distance=%.1f delay=%.3f speed=%.2f", controller.TriggerCount, attack.Name, enemyCharacter.Name, distance, delay, speed))
@@ -213,6 +250,7 @@ Rere:Connect(function()
                 Rere.Text({"Rejected blocks: " .. controller.RejectedBlocks})
                 Rere.Text({"Listeners: " .. #controller.Connections})
                 Rere.Text({"Last block state: " .. controller.LastBlockState})
+                Rere.Text({"Last rejection: " .. (controller.LastRejectReason ~= "" and controller.LastRejectReason or "None")})
                 Rere.Text({"Pulse active: " .. tostring(controller.PulseActive)})
                 Rere.Text({"Known attack animations: " .. controller.KnownAnimations})
                 Rere.Text({"Last target: " .. (controller.LastTarget ~= "" and controller.LastTarget or "None")})
@@ -246,7 +284,7 @@ Rere:Connect(function()
                     Rere.Text({"Per-class M1/M2 windups divide by observed track speed."})
                 Rere.End()
                 Rere.CollapsingHeader({"Block pipeline"})
-                    Rere.Text({"Resolve CombatType Block module -> set Block.Activated credit -> Block() -> hold -> Unblock()."})
+                    Rere.Text({"Release M1 hold -> resolve Block module -> set Block.Activated credit -> Block() -> hold -> Unblock()."})
                 Rere.End()
                 Rere.CollapsingHeader({"Rollback"})
                     Rere.Text({"Run _G.__CodexAutoParry.Stop() to disconnect listeners and release block."})

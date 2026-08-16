@@ -28,6 +28,8 @@ At startup, the controller scans every `Animation` below `ReplicatedStorage.Anim
 
 The script resolves `ReplicatedStorage.CombatSystemClient.Combat.<CombatType>.Block`, with `Base` fallback. It mirrors the game's physical `F` handler: for the configured hold time it retries `Block()` once per scheduler step and refreshes `_G.__GakuranAcCombatInputCreditAt["Block.Activated"]`, then calls `Unblock()`. A pulse is accepted only when the game sets `Character.Blocking` to `true`.
 
+When an incoming M1/M2 is detected, the controller also invokes the local M1 module's `Hold("Stop")`, matching the native block-input path. This stops continuing an M1 chain, but an already active attack may remain uncancellable until its recovery state ends.
+
 ### Rapid punches, heavy timing, and observability
 
 M1 and M2 use the per-class values in the combat windup table. At `1x` speed, Basic M1 is `0.352s` and Basic M2 is `0.537s`; the other classes use their own combo values. Runtime delay is `windup / track.Speed * TimingScale`. All attacks share one block pulse: a new rapid punch extends `BlockingUntil`, so an older timer cannot release block during a newer attack. Every accepted detection increments `TriggerCount` and records combat style, attack name, target, distance, speed, and delay.
@@ -51,7 +53,7 @@ M1 and M2 use the per-class values in the combat windup table. At `1x` speed, Ba
 
 ### Dashboard
 
-Shows enabled state, detection trigger count, accepted and rejected block counts, listener count, last block state, last target, last animation ID, last error, player, and place ID. A trigger confirms detection; only an accepted block confirms the game entered its blocking state.
+Shows enabled state, detection trigger count, accepted and rejected block counts, listener count, last block state, last rejection reason, last target, last animation ID, last error, player, and place ID. A trigger confirms detection; only an accepted block confirms the game entered its blocking state.
 
 ### Controls
 
