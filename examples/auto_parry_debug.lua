@@ -13,7 +13,8 @@ if _G.__CodexAutoParry and _G.__CodexAutoParry.Stop then _G.__CodexAutoParry.Sto
 
 local controller = {
     Enabled = true, Radius = 14, HoldTime = 0.24, Cooldown = 0.16,
-    TriggerCount = 0, Connections = {}, LastTrigger = 0,
+    TriggerCount = 0, SuccessfulBlocks = 0, RejectedBlocks = 0,
+    Connections = {}, LastTrigger = 0, LastBlockState = "Never attempted",
     LastAnimation = "", LastTarget = "", LastError = "", Events = {},
 }
 local function logEvent(message)
@@ -65,13 +66,31 @@ local function parry(enemyCharacter, animationId)
             logEvent("ERROR " .. controller.LastError)
             return
         end
-        local credit = _G.__GakuranAcCombatInputCreditAt
-        if typeof(credit) ~= "table" then credit = {}; _G.__GakuranAcCombatInputCreditAt = credit end
-        credit["Block.Activated"] = tick()
-        local ok, callError = pcall(block.Block)
-        if not ok then controller.LastError = tostring(callError); logEvent("ERROR Block(): " .. controller.LastError); return end
-        task.wait(controller.HoldTime)
+        local character = LocalPlayer.Character
+        local startedAt, accepted = os.clock(), false
+        repeat
+            local ok, callError = pcall(block.Block)
+            if not ok then
+                controller.LastError = tostring(callError)
+                logEvent("ERROR Block(): " .. controller.LastError)
+                break
+            end
+            local credit = _G.__GakuranAcCombatInputCreditAt
+            if typeof(credit) ~= "table" then credit = {}; _G.__GakuranAcCombatInputCreditAt = credit end
+            credit["Block.Activated"] = tick()
+            accepted = accepted or (character and character:GetAttribute("Blocking") == true)
+            task.wait()
+        until os.clock() - startedAt >= controller.HoldTime
         if typeof(block.Unblock) == "function" then pcall(block.Unblock) end
+        if accepted then
+            controller.SuccessfulBlocks += 1
+            controller.LastBlockState = "Accepted"
+            logEvent("BLOCK accepted and released")
+        else
+            controller.RejectedBlocks += 1
+            controller.LastBlockState = "Rejected by game state"
+            logEvent("BLOCK rejected: Blocking attribute never became true")
+        end
     end)
 end
 local ignored = {idle=true, walk=true, run=true, jump=true, fall=true, land=true, swim=true, climb=true, sit=true, dash=true}
@@ -92,6 +111,7 @@ local function watchCharacter(character)
         end))
     end)
 end
+local enabledState
 local function watchPlayer(player)
     if player == LocalPlayer then return end
     if player.Character then watchCharacter(player.Character) end
@@ -102,6 +122,7 @@ table.insert(controller.Connections, Players.PlayerAdded:Connect(watchPlayer))
 table.insert(controller.Connections, UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == Enum.KeyCode.H then
         controller.Enabled = not controller.Enabled
+        if enabledState then enabledState:set(controller.Enabled) end
         logEvent("TOGGLE enabled=" .. tostring(controller.Enabled))
     end
 end))
@@ -116,7 +137,8 @@ end
 _G.__CodexAutoParry = controller
 logEvent("START listeners=" .. tostring(#controller.Connections))
 
-local enabled, radius = Rere.State(true), Rere.State(14)
+enabledState = Rere.State(true)
+local enabled, radius = enabledState, Rere.State(14)
 local holdTime, cooldown, filter = Rere.State(0.24), Rere.State(0.16), Rere.State("")
 Rere:Connect(function()
     controller.Enabled, controller.Radius = enabled:get(), radius:get()
@@ -126,7 +148,10 @@ Rere:Connect(function()
             Rere.Tab({"Dashboard"})
                 Rere.Text({"Status: " .. (controller.Enabled and "ENABLED" or "DISABLED")})
                 Rere.Text({"Triggers: " .. controller.TriggerCount})
+                Rere.Text({"Accepted blocks: " .. controller.SuccessfulBlocks})
+                Rere.Text({"Rejected blocks: " .. controller.RejectedBlocks})
                 Rere.Text({"Listeners: " .. #controller.Connections})
+                Rere.Text({"Last block state: " .. controller.LastBlockState})
                 Rere.Text({"Last target: " .. (controller.LastTarget ~= "" and controller.LastTarget or "None")})
                 Rere.Text({"Last animation: " .. (controller.LastAnimation ~= "" and controller.LastAnimation or "None")})
                 Rere.Text({"Last error: " .. (controller.LastError ~= "" and controller.LastError or "None")})

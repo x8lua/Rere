@@ -26,7 +26,7 @@ The controller subscribes to each other player's `Humanoid.Animator.AnimationPla
 
 ### Block action
 
-The script resolves `ReplicatedStorage.CombatSystemClient.Combat.<CombatType>.Block`, with `Base` fallback. It writes `_G.__GakuranAcCombatInputCreditAt["Block.Activated"]`, calls `Block()`, waits `Hold time`, and calls `Unblock()`.
+The script resolves `ReplicatedStorage.CombatSystemClient.Combat.<CombatType>.Block`, with `Base` fallback. It mirrors the game's physical `F` handler: for the configured hold time it retries `Block()` once per scheduler step and refreshes `_G.__GakuranAcCombatInputCreditAt["Block.Activated"]`, then calls `Unblock()`. A pulse is accepted only when the game sets `Character.Blocking` to `true`.
 
 ### Debouncing and observability
 
@@ -36,7 +36,7 @@ The script resolves `ReplicatedStorage.CombatSystemClient.Combat.<CombatType>.Bl
 
 ### Dashboard
 
-Shows enabled state, trigger count, listener count, last target, last animation ID, last error, player, and place ID.
+Shows enabled state, detection trigger count, accepted and rejected block counts, listener count, last block state, last target, last animation ID, last error, player, and place ID. A trigger confirms detection; only an accepted block confirms the game entered its blocking state.
 
 ### Controls
 
@@ -57,6 +57,7 @@ The page repeats the detection, block, and rollback stages in execution order so
 | Window does not appear | Executor supports `loadstring`/`load` and `game:HttpGet` | Use an executor with both APIs or load the bundled source directly |
 | Listener count is zero | Other characters have loaded `Humanoid.Animator` instances | Wait for respawn or rejoin; `CharacterAdded` is handled automatically |
 | Trigger count stays zero | Target is outside radius, facing away, or using non-Action priority | Increase radius temporarily and inspect target animation IDs |
+| Triggers rise but accepted blocks do not | The game is rejecting block because of equip, stun, cooldown, guard break, or another combat state | Read `Last block state`; compare with a manual `F` block in the same state |
 | Too many triggers | A movement animation has a different name | Add its lowercase name to `ignored` in the example |
 | Block errors appear | Combat type folder or `Block` module is missing | Read `Last error` and inspect `PlayerData.CombatType` |
 | Reaction is late | The animation event is close to the hit frame | Lower `Cooldown` and tune `Hold time` between 0.10 and 0.30 seconds |
@@ -75,5 +76,6 @@ Rollback disables the controller, disconnects player and animation listeners, an
 - Dashboard status is `ENABLED`.
 - Listener count is greater than zero when other characters are present.
 - Trigger count increments during nearby Action-priority attacks.
+- Accepted blocks increments and `Last block state` reads `Accepted` when the game enters `Character.Blocking`.
 - Event log records `PARRY #...` with target, distance, and animation ID.
 - Stop and disconnect leaves the player unblocked and listener count at zero.
