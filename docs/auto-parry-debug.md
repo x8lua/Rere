@@ -7,7 +7,7 @@
 1. Run the complete Lua file in an executor connected to the target client.
 2. Confirm the `Auto Parry Debugger` window appears.
 3. Watch `Dashboard > Triggers` while another player attacks nearby.
-4. Tune `Radius`, `Hold time`, and `Cooldown` under `Controls`.
+4. Tune `Radius`, `Hold time`, and `Heavy delay` under `Controls`.
 5. Press `H` to toggle the controller without closing the window.
 
 The file is self-contained and does not require inserting a ModuleScript into the game. Re-running it first stops the previous `_G.__CodexAutoParry` instance, preventing duplicate listeners.
@@ -16,7 +16,7 @@ The file is self-contained and does not require inserting a ModuleScript into th
 
 ### Detection
 
-The controller subscribes to each other player's `Humanoid.Animator.AnimationPlayed` signal. It accepts `Action` through `Action4`, ignores locomotion names (`idle`, `walk`, `run`, `jump`, `fall`, `land`, `swim`, `climb`, `sit`, and `dash`), and then checks:
+The controller subscribes to each other player's `Humanoid.Animator.AnimationPlayed` signal and accepts only these known attack IDs: `83491849294956`, `89420531853362`, `83730275893449`, `106980660082799`, and heavy punch `78888626472394`. Walking and unrelated Action-priority animations are excluded by construction. It then checks:
 
 - local and target Humanoids are alive;
 - both characters have a `HumanoidRootPart`;
@@ -28,9 +28,9 @@ The controller subscribes to each other player's `Humanoid.Animator.AnimationPla
 
 The script resolves `ReplicatedStorage.CombatSystemClient.Combat.<CombatType>.Block`, with `Base` fallback. It mirrors the game's physical `F` handler: for the configured hold time it retries `Block()` once per scheduler step and refreshes `_G.__GakuranAcCombatInputCreditAt["Block.Activated"]`, then calls `Unblock()`. A pulse is accepted only when the game sets `Character.Blocking` to `true`.
 
-### Debouncing and observability
+### Rapid punches, heavy timing, and observability
 
-`Cooldown` prevents duplicate `AnimationPlayed` events from stacking. Every accepted trigger increments `TriggerCount` and writes a timestamped record containing target, distance, and animation ID. The event log retains 40 records and displays up to 25 matching records.
+Normal punches begin blocking immediately. Heavy punch waits `0.40` seconds after its animation begins. All punches share one block pulse: a new rapid punch extends `BlockingUntil`, so an older timer cannot release block during a newer attack. Every accepted detection increments `TriggerCount` and records attack type, target, distance, and delay.
 
 ## Debug page
 
@@ -40,7 +40,7 @@ Shows enabled state, detection trigger count, accepted and rejected block counts
 
 ### Controls
 
-`Enabled` mirrors the controller state. `Radius` ranges from 2 to 30 studs. `Hold time` ranges from 0.05 to 0.60 seconds. `Cooldown` ranges from 0.05 to 0.80 seconds. `Stop and disconnect` calls `controller.Stop()`, disconnects all listeners, and releases block.
+`Enabled` mirrors the controller state. `Radius` ranges from 2 to 30 studs. `Hold time` ranges from 0.05 to 0.60 seconds and controls how far every rapid punch extends the shared pulse. `Heavy delay` defaults to 0.40 seconds. `Stop and disconnect` calls `controller.Stop()`, disconnects all listeners, and releases block.
 
 ### Event log
 
@@ -58,9 +58,9 @@ The page repeats the detection, block, and rollback stages in execution order so
 | Listener count is zero | Other characters have loaded `Humanoid.Animator` instances | Wait for respawn or rejoin; `CharacterAdded` is handled automatically |
 | Trigger count stays zero | Target is outside radius, facing away, or using non-Action priority | Increase radius temporarily and inspect target animation IDs |
 | Triggers rise but accepted blocks do not | The game is rejecting block because of equip, stun, cooldown, guard break, or another combat state | Read `Last block state`; compare with a manual `F` block in the same state |
-| Too many triggers | A movement animation has a different name | Add its lowercase name to `ignored` in the example |
+| Walking triggers a reaction | Running source predates the exact animation allowlist | Reload the current example; only the five documented IDs are accepted |
 | Block errors appear | Combat type folder or `Block` module is missing | Read `Last error` and inspect `PlayerData.CombatType` |
-| Reaction is late | The animation event is close to the hit frame | Lower `Cooldown` and tune `Hold time` between 0.10 and 0.30 seconds |
+| Rapid punches interrupt each other | Running source predates the shared block pulse | Reload the current example and confirm `BLOCK extended` appears in the log |
 | Controller remains active | Listeners were not disconnected | Press `H` or run `_G.__CodexAutoParry.Stop()` |
 
 ## Rollback
