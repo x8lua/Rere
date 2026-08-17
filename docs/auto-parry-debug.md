@@ -7,8 +7,9 @@
 1. Run the complete Lua file in an executor connected to the target client.
 2. Confirm the `Auto Parry Debugger` window appears.
 3. Watch `Dashboard > Triggers` while another player attacks nearby.
-4. Tune `Radius`, `Hold time`, `Timing scale`, and `Parry lead` under `Controls`.
+4. Tune `Radius`, `Hold time`, `Timing scale`, `Parry lead`, and lock smoothness under `Controls`.
 5. Press `H` to toggle the controller without closing the window.
+6. Press `G` to lock the visible opponent nearest the cursor.
 
 The file is self-contained and does not require inserting a ModuleScript into the game. Re-running it first stops the previous `_G.__CodexAutoParry` instance, preventing duplicate listeners.
 
@@ -52,13 +53,17 @@ M1 and M2 use the per-class values in the combat windup table. At `1x` speed, Ba
 
 ## Debug page
 
+## Target lock
+
+Press `G` to project each live opponent's `HumanoidRootPart` onto the viewport and lock the player nearest the cursor. While locked, auto-parry ignores all other players. The camera eases toward the locked target every frame; `Lock smoothness` controls that easing, where a lower value moves more gradually and a higher value follows more tightly. Press `G` again to select a different cursor-nearest target, or use `Clear target lock`. The lock clears automatically if the target leaves or becomes unavailable.
+
 ### Dashboard
 
 Shows enabled state, detection trigger count, accepted and rejected block counts, listener count, last block state, last rejection reason, last target, last animation ID, last error, player, and place ID. A trigger confirms detection; only an accepted block confirms the game entered its blocking state.
 
 ### Controls
 
-`Enabled` mirrors the controller state. `Radius` ranges from 2 to 30 studs. `Hold time` ranges from 0.05 to 0.60 seconds and controls the post-start block duration; the lead is added so early blocks cover the hit timestamp. `Timing scale` defaults to `1.0x`; lower values react earlier and higher values react later. `Parry lead` defaults to `0.15s`; increase it if the log still shows `Stunned=true` at the scheduled block. `Stop and disconnect` calls `controller.Stop()`, disconnects all listeners, and releases block.
+`Enabled` mirrors the controller state. `Radius` ranges from 2 to 30 studs. `Hold time` ranges from 0.05 to 0.60 seconds and controls the post-start block duration; the lead is added so early blocks cover the hit timestamp. `Timing scale` defaults to `1.0x`; lower values react earlier and higher values react later. `Parry lead` defaults to `0.15s`; increase it if the log still shows `Stunned=true` at the scheduled block. `Lock smoothness` defaults to `10`; lower values make camera tracking gentler and higher values make it tighter. `Stop and disconnect` calls `controller.Stop()`, disconnects all listeners, and releases block.
 
 ### Event log
 

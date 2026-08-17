@@ -10,6 +10,7 @@ Rere.Init()
 _G.__CodexAutoParryRere = Rere
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
@@ -22,10 +23,44 @@ local controller = {
     Connections = {}, BlockingUntil = 0, PulseActive = false,
     LastBlockState = "Never attempted",
     LastRejectReason = "", LastAnimation = "", LastTarget = "", LastError = "", Events = {},
+    LockedPlayer = nil, LockedDistance = nil, LockSmoothness = 10,
 }
 local function logEvent(message)
     table.insert(controller.Events, 1, os.date("%H:%M:%S") .. "  " .. message)
     while #controller.Events > 40 do table.remove(controller.Events) end
+end
+local function clearTargetLock(reason)
+    if controller.LockedPlayer then
+        logEvent("UNLOCK target=" .. controller.LockedPlayer.Name .. " reason=" .. reason)
+    end
+    controller.LockedPlayer = nil
+    controller.LockedDistance = nil
+end
+local function lockClosestCursorTarget()
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local cursor = UserInputService:GetMouseLocation()
+    local closestPlayer, closestDistance
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local character = player.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            if root and humanoid and humanoid.Health > 0 then
+                local point, visible = camera:WorldToViewportPoint(root.Position)
+                if visible and point.Z > 0 then
+                    local distance = (Vector2.new(point.X, point.Y) - cursor).Magnitude
+                    if not closestDistance or distance < closestDistance then
+                        closestPlayer, closestDistance = player, distance
+                    end
+                end
+            end
+        end
+    end
+    if not closestPlayer then clearTargetLock("no visible target near cursor"); return end
+    controller.LockedPlayer = closestPlayer
+    controller.LockedDistance = closestDistance
+    logEvent(string.format("LOCK target=%s cursorDistance=%.0fpx", closestPlayer.Name, closestDistance))
 end
 local function getBlockModule()
     local character = LocalPlayer.Character
@@ -77,6 +112,7 @@ local function getBlockRejectReasons(character)
 end
 local function canReact(enemyCharacter)
     if not controller.Enabled then return false end
+    if controller.LockedPlayer and controller.LockedPlayer.Character ~= enemyCharacter then return false end
     local character = LocalPlayer.Character
     local localRoot = character and character:FindFirstChild("HumanoidRootPart")
     local enemyRoot = enemyCharacter and enemyCharacter:FindFirstChild("HumanoidRootPart")
@@ -214,12 +250,33 @@ local function watchPlayer(player)
 end
 for _, player in ipairs(Players:GetPlayers()) do watchPlayer(player) end
 table.insert(controller.Connections, Players.PlayerAdded:Connect(watchPlayer))
+table.insert(controller.Connections, Players.PlayerRemoving:Connect(function(player)
+    if player == controller.LockedPlayer then clearTargetLock("player left") end
+end))
 table.insert(controller.Connections, UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.H then
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.H then
         controller.Enabled = not controller.Enabled
         if enabledState then enabledState:set(controller.Enabled) end
         logEvent("TOGGLE enabled=" .. tostring(controller.Enabled))
+    elseif input.KeyCode == Enum.KeyCode.G then
+        lockClosestCursorTarget()
     end
+end))
+table.insert(controller.Connections, RunService.RenderStepped:Connect(function(deltaTime)
+    local player = controller.LockedPlayer
+    local camera = workspace.CurrentCamera
+    local character = player and player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not player then return end
+    if not camera or not root or not humanoid or humanoid.Health <= 0 then
+        clearTargetLock("target unavailable")
+        return
+    end
+    local alpha = 1 - math.exp(-controller.LockSmoothness * deltaTime)
+    local targetPosition = root.Position + Vector3.new(0, 1.5, 0)
+    camera.CFrame = camera.CFrame:Lerp(CFrame.lookAt(camera.CFrame.Position, targetPosition), alpha)
 end))
 function controller.Stop()
     controller.Enabled = false
@@ -230,17 +287,20 @@ function controller.Stop()
     if block and typeof(block.Unblock) == "function" then pcall(block.Unblock) end
     logEvent("STOP listeners disconnected")
 end
+controller.LockClosestCursorTarget = lockClosestCursorTarget
+controller.ClearTargetLock = clearTargetLock
 _G.__CodexAutoParry = controller
 logEvent("START listeners=" .. tostring(#controller.Connections))
 
 enabledState = Rere.State(true)
 local enabled, radius = enabledState, Rere.State(14)
 local holdTime = Rere.State(0.24)
-local timingScale, parryLead, filter = Rere.State(1), Rere.State(0.15), Rere.State("")
+local timingScale, parryLead, lockSmoothness, filter = Rere.State(1), Rere.State(0.15), Rere.State(10), Rere.State("")
 Rere:Connect(function()
     controller.Enabled, controller.Radius = enabled:get(), radius:get()
     controller.HoldTime = holdTime:get()
     controller.TimingScale, controller.ParryLead = timingScale:get(), parryLead:get()
+    controller.LockSmoothness = lockSmoothness:get()
     Rere.Window({"Auto Parry Debugger"})
         Rere.TabBar()
             Rere.Tab({"Dashboard"})
@@ -254,6 +314,8 @@ Rere:Connect(function()
                 Rere.Text({"Pulse active: " .. tostring(controller.PulseActive)})
                 Rere.Text({"Known attack animations: " .. controller.KnownAnimations})
                 Rere.Text({"Last target: " .. (controller.LastTarget ~= "" and controller.LastTarget or "None")})
+                Rere.Text({"Target lock: " .. (controller.LockedPlayer and controller.LockedPlayer.Name or "Off")})
+                Rere.Text({"Lock cursor distance: " .. (controller.LockedDistance and string.format("%.0f px", controller.LockedDistance) or "None")})
                 Rere.Text({"Last animation: " .. (controller.LastAnimation ~= "" and controller.LastAnimation or "None")})
                 Rere.Text({"Last error: " .. (controller.LastError ~= "" and controller.LastError or "None")})
                 Rere.Separator()
@@ -266,8 +328,10 @@ Rere:Connect(function()
                 Rere.SliderNum({"Hold time", 0.01, 0.05, 0.6, "%.2f s"}, {number = holdTime})
                 Rere.SliderNum({"Timing scale", 0.01, 0.5, 1.5, "%.2fx"}, {number = timingScale})
                 Rere.SliderNum({"Parry lead", 0.01, 0, 0.25, "%.2f s"}, {number = parryLead})
+                Rere.SliderNum({"Lock smoothness", 0.5, 1, 30, "%.1f"}, {number = lockSmoothness})
+                if Rere.Button({"Clear target lock"}).clicked() then clearTargetLock("manual clear") end
                 if Rere.Button({"Stop and disconnect"}).clicked() then controller.Stop() end
-                Rere.Text({"Press H to toggle enabled state."})
+                Rere.Text({"H toggles auto-parry. G locks the cursor-nearest visible opponent."})
             Rere.End()
             Rere.Tab({"Event log"})
                 Rere.InputText({"Filter", "target, animation, error..."}, {text = filter})
@@ -283,6 +347,7 @@ Rere:Connect(function()
                 Rere.CollapsingHeader({"Detection pipeline"})
                     Rere.Text({"Combat descendants named 1stM1-4thM1 or M2 -> ID map -> range/health/state checks."})
                     Rere.Text({"Block starts before hitbox release by Parry lead; default 0.15s for fast Striker M1 #4."})
+                    Rere.Text({"G target lock eases the camera toward the selected opponent and filters parry events."})
                 Rere.End()
                 Rere.CollapsingHeader({"Block pipeline"})
                     Rere.Text({"Release M1 hold -> resolve Block module -> set Block.Activated credit -> Block() -> hold -> Unblock()."})
