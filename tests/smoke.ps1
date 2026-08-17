@@ -3,6 +3,10 @@ foreach ($marker in @("local function requireModule", "return requireModule(node
     if (-not $source.Contains($marker)) { throw "Missing bundle marker: $marker" }
 }
 if (-not $source.Contains('Iris.Version = "0.1.24"')) { throw "Bundle version is not 0.1.24" }
+if (-not $source.Contains('local function isGuiParent(container: unknown): boolean')) { throw "Missing GUI parent compatibility check" }
+if (-not $source.Contains('if ok and isGuiParent(container) then')) { throw "Unsupported host GUI containers must be skipped" }
+if (-not $source.Contains('if ok and isGuiParent(coreGui) then')) { throw "CoreGui must be validated before use" }
+if (-not $source.Contains('Rere: could not resolve a GUI-capable parent')) { throw "Missing GUI parent resolution error" }
 if ([regex]::Matches($source, 'local OpenTweenInfo = TweenInfo.new\(0.1').Count -ne 2) { throw "Combo and section durations must both be 0.1 seconds" }
 if (-not $source.Contains('local TargetRotation = if IsOpened then 90 else 0')) { throw "Missing Combo arrow direction state" }
 if ([regex]::Matches($source, 'ArrowGlyph\.Rotation = TargetRotation').Count -ne 1) { throw "Missing arrow glyph rotation initialization" }

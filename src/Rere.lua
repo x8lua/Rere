@@ -6598,6 +6598,17 @@ sources[nodes['Iris']] = function(script)
     function Iris:GetVersion(): string
         return self.Version
     end
+    local function isGuiParent(container: unknown): boolean
+        if typeof(container) ~= "Instance" then
+            return false
+        end
+
+        local ok, compatible = pcall(function()
+            return container:IsA("GuiBase2d") or container:IsA("BasePlayerGui")
+        end)
+        return ok and compatible
+    end
+
     local function resolveExecutorParent(): BasePlayerGui | GuiBase2d
         for _, getContainer in {
             function()
@@ -6612,7 +6623,7 @@ sources[nodes['Iris']] = function(script)
             end,
         } do
             local ok, container = pcall(getContainer)
-            if ok and typeof(container) == "Instance" then
+            if ok and isGuiParent(container) then
                 return container
             end
         end
@@ -6620,11 +6631,13 @@ sources[nodes['Iris']] = function(script)
         local ok, coreGui = pcall(function()
             return game:GetService("CoreGui")
         end)
-        if ok and coreGui then
+        if ok and isGuiParent(coreGui) then
             return coreGui
         end
 
-        return game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+        local playerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+        assert(isGuiParent(playerGui), "Rere: could not resolve a GUI-capable parent")
+        return playerGui
     end
 
     --[=[
