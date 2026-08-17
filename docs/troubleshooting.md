@@ -13,7 +13,7 @@ Do not hardcode a version string. Use:
 Rere.Text({"Rere v" .. Rere:GetVersion()})
 ```
 
-Pin the URL to `v0.1.24` and re-execute the script.
+Pin the URL to `v0.1.25` and re-execute the script.
 
 ## Duplicate windows appear
 
@@ -25,7 +25,7 @@ Check that the constructor is inside the correct parent and that every parent ha
 
 ## Dropdown arrows or animation look stale
 
-Use `v0.1.24` or newer. Combo arrows rotate right (`0°`) to down (`90°`), and opening and closing use `0.1s` transitions.
+Use `v0.1.25` or newer. Combo arrows rotate right (`0°`) to down (`90°`), and opening and closing use `0.1s` transitions.
 
 ## `attempt to call a nil value`
 

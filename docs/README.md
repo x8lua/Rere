@@ -8,7 +8,7 @@ icon: book-open
 Rere is an executor-compatible Roblox UI library. It bundles Iris into one loadable Luau file, so you do not need Roblox Studio ModuleScripts or `require` paths.
 
 {% hint style="info" %}
-The current pinned release is **v0.1.24**. Use an immutable tag in executor scripts.
+The current pinned release is **v0.1.25**. Use an immutable tag in executor scripts.
 {% endhint %}
 
 ## What you can build

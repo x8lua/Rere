@@ -6594,7 +6594,7 @@ sources[nodes['Iris']] = function(script)
 
     local Internal: Types.Internal = require(script.Internal)(Iris)
 
-    Iris.Version = "0.1.24"
+    Iris.Version = "0.1.25"
     function Iris:GetVersion(): string
         return self.Version
     end
@@ -6694,7 +6694,7 @@ sources[nodes['Iris']] = function(script)
             return Iris
         end
 
-        if parentInstance == nil then
+        if not isGuiParent(parentInstance) then
             parentInstance = resolveExecutorParent()
         end
         if eventConnection == nil then

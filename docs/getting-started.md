@@ -14,7 +14,7 @@ Rere is designed for an executor. It is not a Roblox Studio ModuleScript package
 Use the immutable raw bundle URL:
 
 ```lua
-local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.24/src/Rere.lua")
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.25/src/Rere.lua")
 ```
 {% endstep %}
 

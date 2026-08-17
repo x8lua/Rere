@@ -4,7 +4,7 @@ assert(type(compiler) == "function", "Rere requires loadstring or load")
 if _G.RereAutoParryUI and _G.RereAutoParryUI.Shutdown then
     pcall(_G.RereAutoParryUI.Shutdown)
 end
-local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.24/src/Rere.lua")
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.25/src/Rere.lua")
 local Rere = assert(compiler(source))()
 Rere.Init()
 _G.RereAutoParryUI = Rere

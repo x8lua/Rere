@@ -18,7 +18,7 @@ Heres a basic Example:
 
 ```lua
 local compiler = loadstring or load
-local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.24/src/Rere.lua")
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.25/src/Rere.lua")
 local Iris = assert(compiler(source))()
 Iris.Init()
 
@@ -43,7 +43,7 @@ And a more complex Example:
 
 ```lua
 local compiler = loadstring or load
-local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.24/src/Rere.lua")
+local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.25/src/Rere.lua")
 local Iris = assert(compiler(source))()
 Iris.Init()
 
