@@ -275,7 +275,8 @@ table.insert(controller.Connections, RunService.RenderStepped:Connect(function(d
         return
     end
     local alpha = 1 - math.exp(-controller.LockSmoothness * deltaTime)
-    local targetPosition = root.Position + Vector3.new(0, 1.5, 0)
+    -- Yaw-only lock: preserve the player's current vertical aim.
+    local targetPosition = Vector3.new(root.Position.X, camera.CFrame.Position.Y, root.Position.Z)
     camera.CFrame = camera.CFrame:Lerp(CFrame.lookAt(camera.CFrame.Position, targetPosition), alpha)
 end))
 function controller.Stop()

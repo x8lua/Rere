@@ -55,7 +55,7 @@ M1 and M2 use the per-class values in the combat windup table. At `1x` speed, Ba
 
 ## Target lock
 
-Press `G` to project each live opponent's `HumanoidRootPart` onto the viewport and lock the player nearest the cursor. While locked, auto-parry ignores all other players. The camera eases toward the locked target every frame; `Lock smoothness` controls that easing, where a lower value moves more gradually and a higher value follows more tightly. Press `G` again to select a different cursor-nearest target, or use `Clear target lock`. The lock clears automatically if the target leaves or becomes unavailable.
+Press `G` to project each live opponent's `HumanoidRootPart` onto the viewport and lock the player nearest the cursor. While locked, auto-parry ignores all other players. The camera eases horizontally toward the locked target every frame while preserving the current vertical aim; `Lock smoothness` controls that easing, where a lower value moves more gradually and a higher value follows more tightly. Press `G` again to select a different cursor-nearest target, or use `Clear target lock`. The lock clears automatically if the target leaves or becomes unavailable.
 
 ### Dashboard
 
