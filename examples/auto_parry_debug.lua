@@ -1,20 +1,20 @@
 -- Complete Rere executor example: Gakuran auto-parry plus live diagnostics.
 local compiler = loadstring or load
 assert(type(compiler) == "function", "Rere requires loadstring or load")
-if _G.__CodexAutoParryRere and _G.__CodexAutoParryRere.Shutdown then
-    pcall(_G.__CodexAutoParryRere.Shutdown)
+if _G.RereAutoParryUI and _G.RereAutoParryUI.Shutdown then
+    pcall(_G.RereAutoParryUI.Shutdown)
 end
 local source = game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/v0.1.24/src/Rere.lua")
 local Rere = assert(compiler(source))()
 Rere.Init()
-_G.__CodexAutoParryRere = Rere
+_G.RereAutoParryUI = Rere
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
-if _G.__CodexAutoParry and _G.__CodexAutoParry.Stop then _G.__CodexAutoParry.Stop() end
+if _G.RereAutoParry and _G.RereAutoParry.Stop then _G.RereAutoParry.Stop() end
 
 local controller = {
     Enabled = true, Radius = 14, HoldTime = 0.24,
@@ -290,7 +290,7 @@ function controller.Stop()
 end
 controller.LockClosestCursorTarget = lockClosestCursorTarget
 controller.ClearTargetLock = clearTargetLock
-_G.__CodexAutoParry = controller
+_G.RereAutoParry = controller
 logEvent("START listeners=" .. tostring(#controller.Connections))
 
 enabledState = Rere.State(true)
@@ -354,7 +354,7 @@ Rere:Connect(function()
                     Rere.Text({"Release M1 hold -> resolve Block module -> set Block.Activated credit -> Block() -> hold -> Unblock()."})
                 Rere.End()
                 Rere.CollapsingHeader({"Rollback"})
-                    Rere.Text({"Run _G.__CodexAutoParry.Stop() to disconnect listeners and release block."})
+                    Rere.Text({"Run _G.RereAutoParry.Stop() to disconnect listeners and release block."})
                 Rere.End()
             Rere.End()
         Rere.End()

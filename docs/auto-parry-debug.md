@@ -11,7 +11,7 @@
 5. Press `H` to toggle the controller without closing the window.
 6. Press `G` to lock the visible opponent nearest the cursor.
 
-The file is self-contained and does not require inserting a ModuleScript into the game. Re-running it first stops the previous `_G.__CodexAutoParry` instance, preventing duplicate listeners.
+The file is self-contained and does not require inserting a ModuleScript into the game. Re-running it first stops the previous `_G.RereAutoParry` instance, preventing duplicate listeners.
 
 ## Runtime pipeline
 
@@ -84,12 +84,12 @@ The page repeats the detection, block, and rollback stages in execution order so
 | Walking triggers a reaction | Running source predates folder-based classification | Reload the current example; only exact `1stM1`-`4thM1` and `M2` names are accepted |
 | Block errors appear | Combat type folder or `Block` module is missing | Read `Last error` and inspect `PlayerData.CombatType` |
 | Pulses are rejected with `Stunned=true` | Block started at or after hitbox release | Increase `Parry lead`; the default is 0.15 seconds |
-| Controller remains active | Listeners were not disconnected | Press `H` or run `_G.__CodexAutoParry.Stop()` |
+| Controller remains active | Listeners were not disconnected | Press `H` or run `_G.RereAutoParry.Stop()` |
 
 ## Rollback
 
 ```lua
-_G.__CodexAutoParry.Stop()
+_G.RereAutoParry.Stop()
 ```
 
 Rollback disables the controller, disconnects player and animation listeners, and calls `Unblock()`. The live Rere window can remain open for inspection after rollback; its status and listener count will reflect the stopped controller.
