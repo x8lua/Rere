@@ -86,7 +86,6 @@ local function canReact(enemyCharacter)
     if not enemyHumanoid or enemyHumanoid.Health <= 0 then return false end
     local offset = localRoot.Position - enemyRoot.Position
     if offset.Magnitude > controller.Radius or offset.Magnitude < 0.05 then return false end
-    if enemyRoot.CFrame.LookVector:Dot(offset.Unit) < -0.15 then return false end
     for _, attribute in ipairs({"Ragdoll", "Downed", "GrappleWinnerStun", "CantAnything"}) do
         if character:GetAttribute(attribute) == true then return false end
     end
@@ -282,7 +281,7 @@ Rere:Connect(function()
             Rere.End()
             Rere.Tab({"Diagnostics"})
                 Rere.CollapsingHeader({"Detection pipeline"})
-                    Rere.Text({"Combat descendants named 1stM1-4thM1 or M2 -> ID map -> range/facing/state checks."})
+                    Rere.Text({"Combat descendants named 1stM1-4thM1 or M2 -> ID map -> range/health/state checks."})
                     Rere.Text({"Block starts before hitbox release by Parry lead; default 0.10s."})
                 Rere.End()
                 Rere.CollapsingHeader({"Block pipeline"})

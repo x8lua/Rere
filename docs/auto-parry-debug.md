@@ -21,8 +21,9 @@ At startup, the controller scans every `Animation` below `ReplicatedStorage.Anim
 - local and target Humanoids are alive;
 - both characters have a `HumanoidRootPart`;
 - target distance is within `Radius`;
-- target look vector faces the local character; and
 - local `Ragdoll`, `Downed`, `GrappleWinnerStun`, and `CantAnything` attributes are not active.
+
+Facing is intentionally not required. An attacker can begin an allowlisted attack while facing away and turn toward the target during the windup; the animation itself remains the authoritative attack signal.
 
 ### Block action
 
@@ -73,7 +74,7 @@ The page repeats the detection, block, and rollback stages in execution order so
 | --- | --- | --- |
 | Window does not appear | Executor supports `loadstring`/`load` and `game:HttpGet` | Use an executor with both APIs or load the bundled source directly |
 | Listener count is zero | Other characters have loaded `Humanoid.Animator` instances | Wait for respawn or rejoin; `CharacterAdded` is handled automatically |
-| Trigger count stays zero | Target is outside radius, facing away, or using non-Action priority | Increase radius temporarily and inspect target animation IDs |
+| Trigger count stays zero | Target is outside radius or using an unlisted animation | Increase radius temporarily and inspect target animation IDs |
 | Triggers rise but accepted blocks do not | The game is rejecting block because of equip, stun, cooldown, guard break, or another combat state | Read `Last block state`; compare with a manual `F` block in the same state |
 | Walking triggers a reaction | Running source predates folder-based classification | Reload the current example; only exact `1stM1`-`4thM1` and `M2` names are accepted |
 | Block errors appear | Combat type folder or `Block` module is missing | Read `Last error` and inspect `PlayerData.CombatType` |
