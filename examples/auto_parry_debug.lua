@@ -17,7 +17,7 @@ if _G.__CodexAutoParry and _G.__CodexAutoParry.Stop then _G.__CodexAutoParry.Sto
 
 local controller = {
     Enabled = true, Radius = 14, HoldTime = 0.24,
-    TimingScale = 1, ParryLead = 0.1, KnownAnimations = 0,
+    TimingScale = 1, ParryLead = 0.15, KnownAnimations = 0,
     TriggerCount = 0, SuccessfulBlocks = 0, RejectedBlocks = 0,
     Connections = {}, BlockingUntil = 0, PulseActive = false,
     LastBlockState = "Never attempted",
@@ -129,7 +129,7 @@ local combatAnimations = ReplicatedStorage:WaitForChild("Animations"):WaitForChi
 for _, animation in ipairs(combatAnimations:GetDescendants()) do classifyAnimation(animation) end
 table.insert(controller.Connections, combatAnimations.DescendantAdded:Connect(classifyAnimation))
 local function startOrExtendBlockPulse()
-    controller.BlockingUntil = math.max(controller.BlockingUntil, os.clock() + controller.HoldTime)
+    controller.BlockingUntil = math.max(controller.BlockingUntil, os.clock() + controller.HoldTime + controller.ParryLead)
     if controller.PulseActive then
         logEvent(string.format("BLOCK extended to %.2fs", controller.BlockingUntil - os.clock()))
         return
@@ -236,7 +236,7 @@ logEvent("START listeners=" .. tostring(#controller.Connections))
 enabledState = Rere.State(true)
 local enabled, radius = enabledState, Rere.State(14)
 local holdTime = Rere.State(0.24)
-local timingScale, parryLead, filter = Rere.State(1), Rere.State(0.1), Rere.State("")
+local timingScale, parryLead, filter = Rere.State(1), Rere.State(0.15), Rere.State("")
 Rere:Connect(function()
     controller.Enabled, controller.Radius = enabled:get(), radius:get()
     controller.HoldTime = holdTime:get()
@@ -282,7 +282,7 @@ Rere:Connect(function()
             Rere.Tab({"Diagnostics"})
                 Rere.CollapsingHeader({"Detection pipeline"})
                     Rere.Text({"Combat descendants named 1stM1-4thM1 or M2 -> ID map -> range/health/state checks."})
-                    Rere.Text({"Block starts before hitbox release by Parry lead; default 0.10s."})
+                    Rere.Text({"Block starts before hitbox release by Parry lead; default 0.15s for fast Striker M1 #4."})
                 Rere.End()
                 Rere.CollapsingHeader({"Block pipeline"})
                     Rere.Text({"Release M1 hold -> resolve Block module -> set Block.Activated credit -> Block() -> hold -> Unblock()."})
