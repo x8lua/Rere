@@ -17,7 +17,7 @@ if _G.__CodexAutoParry and _G.__CodexAutoParry.Stop then _G.__CodexAutoParry.Sto
 
 local controller = {
     Enabled = true, Radius = 14, HoldTime = 0.24,
-    TimingScale = 1, KnownAnimations = 0,
+    TimingScale = 1, ParryLead = 0.1, KnownAnimations = 0,
     TriggerCount = 0, SuccessfulBlocks = 0, RejectedBlocks = 0,
     Connections = {}, BlockingUntil = 0, PulseActive = false,
     LastBlockState = "Never attempted",
@@ -181,8 +181,9 @@ local function parry(enemyCharacter, animationId, attack, speed)
     controller.TriggerCount += 1
     releaseM1Hold()
     speed = math.max(math.abs(speed or 1), 0.05)
-    local delay = attack.Windup / speed * controller.TimingScale
-    logEvent(string.format("PARRY #%d %s target=%s distance=%.1f delay=%.3f speed=%.2f", controller.TriggerCount, attack.Name, enemyCharacter.Name, distance, delay, speed))
+    local windup = attack.Windup / speed * controller.TimingScale
+    local delay = math.max(0, windup - controller.ParryLead)
+    logEvent(string.format("PARRY #%d %s target=%s distance=%.1f start=%.3f windup=%.3f lead=%.3f speed=%.2f", controller.TriggerCount, attack.Name, enemyCharacter.Name, distance, delay, windup, controller.ParryLead, speed))
     task.spawn(function()
         if delay > 0 then task.wait(delay) end
         local stillAllowed = canReact(enemyCharacter)
@@ -236,11 +237,11 @@ logEvent("START listeners=" .. tostring(#controller.Connections))
 enabledState = Rere.State(true)
 local enabled, radius = enabledState, Rere.State(14)
 local holdTime = Rere.State(0.24)
-local timingScale, filter = Rere.State(1), Rere.State("")
+local timingScale, parryLead, filter = Rere.State(1), Rere.State(0.1), Rere.State("")
 Rere:Connect(function()
     controller.Enabled, controller.Radius = enabled:get(), radius:get()
     controller.HoldTime = holdTime:get()
-    controller.TimingScale = timingScale:get()
+    controller.TimingScale, controller.ParryLead = timingScale:get(), parryLead:get()
     Rere.Window({"Auto Parry Debugger"})
         Rere.TabBar()
             Rere.Tab({"Dashboard"})
@@ -265,6 +266,7 @@ Rere:Connect(function()
                 Rere.SliderNum({"Radius", 0.5, 2, 30, "%.1f studs"}, {number = radius})
                 Rere.SliderNum({"Hold time", 0.01, 0.05, 0.6, "%.2f s"}, {number = holdTime})
                 Rere.SliderNum({"Timing scale", 0.01, 0.5, 1.5, "%.2fx"}, {number = timingScale})
+                Rere.SliderNum({"Parry lead", 0.01, 0, 0.25, "%.2f s"}, {number = parryLead})
                 if Rere.Button({"Stop and disconnect"}).clicked() then controller.Stop() end
                 Rere.Text({"Press H to toggle enabled state."})
             Rere.End()
@@ -281,7 +283,7 @@ Rere:Connect(function()
             Rere.Tab({"Diagnostics"})
                 Rere.CollapsingHeader({"Detection pipeline"})
                     Rere.Text({"Combat descendants named 1stM1-4thM1 or M2 -> ID map -> range/facing/state checks."})
-                    Rere.Text({"Per-class M1/M2 windups divide by observed track speed."})
+                    Rere.Text({"Block starts before hitbox release by Parry lead; default 0.10s."})
                 Rere.End()
                 Rere.CollapsingHeader({"Block pipeline"})
                     Rere.Text({"Release M1 hold -> resolve Block module -> set Block.Activated credit -> Block() -> hold -> Unblock()."})

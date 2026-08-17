@@ -7,7 +7,7 @@
 1. Run the complete Lua file in an executor connected to the target client.
 2. Confirm the `Auto Parry Debugger` window appears.
 3. Watch `Dashboard > Triggers` while another player attacks nearby.
-4. Tune `Radius`, `Hold time`, and `Timing scale` under `Controls`.
+4. Tune `Radius`, `Hold time`, `Timing scale`, and `Parry lead` under `Controls`.
 5. Press `H` to toggle the controller without closing the window.
 
 The file is self-contained and does not require inserting a ModuleScript into the game. Re-running it first stops the previous `_G.__CodexAutoParry` instance, preventing duplicate listeners.
@@ -32,7 +32,7 @@ When an incoming M1/M2 is detected, the controller also invokes the local M1 mod
 
 ### Rapid punches, heavy timing, and observability
 
-M1 and M2 use the per-class values in the combat windup table. At `1x` speed, Basic M1 is `0.352s` and Basic M2 is `0.537s`; the other classes use their own combo values. Runtime delay is `windup / track.Speed * TimingScale`. All attacks share one block pulse: a new rapid punch extends `BlockingUntil`, so an older timer cannot release block during a newer attack. Every accepted detection increments `TriggerCount` and records combat style, attack name, target, distance, speed, and delay.
+M1 and M2 use the per-class values in the combat windup table. At `1x` speed, Basic M1 is `0.352s` and Basic M2 is `0.537s`; the other classes use their own combo values. Runtime start delay is `max(0, windup / track.Speed * TimingScale - ParryLead)`. The default `ParryLead` is `0.10s`, because starting exactly at hitbox release is too late for the block state to affect that hit. All attacks share one block pulse: a new rapid punch extends `BlockingUntil`, so an older timer cannot release block during a newer attack. Every accepted detection increments `TriggerCount` and records combat style, attack name, target, distance, speed, and delay.
 
 | Class | M1 #1 | M1 #2 | M1 #3 | M1 #4 | M2 |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -57,7 +57,7 @@ Shows enabled state, detection trigger count, accepted and rejected block counts
 
 ### Controls
 
-`Enabled` mirrors the controller state. `Radius` ranges from 2 to 30 studs. `Hold time` ranges from 0.05 to 0.60 seconds and controls how far every rapid punch extends the shared pulse. `Timing scale` defaults to `1.0x`; lower values react earlier and higher values react later. `Stop and disconnect` calls `controller.Stop()`, disconnects all listeners, and releases block.
+`Enabled` mirrors the controller state. `Radius` ranges from 2 to 30 studs. `Hold time` ranges from 0.05 to 0.60 seconds and controls how far every rapid punch extends the shared pulse. `Timing scale` defaults to `1.0x`; lower values react earlier and higher values react later. `Parry lead` defaults to `0.10s`; increase it if the log still shows `Stunned=true` at the scheduled block. `Stop and disconnect` calls `controller.Stop()`, disconnects all listeners, and releases block.
 
 ### Event log
 
@@ -77,7 +77,7 @@ The page repeats the detection, block, and rollback stages in execution order so
 | Triggers rise but accepted blocks do not | The game is rejecting block because of equip, stun, cooldown, guard break, or another combat state | Read `Last block state`; compare with a manual `F` block in the same state |
 | Walking triggers a reaction | Running source predates folder-based classification | Reload the current example; only exact `1stM1`-`4thM1` and `M2` names are accepted |
 | Block errors appear | Combat type folder or `Block` module is missing | Read `Last error` and inspect `PlayerData.CombatType` |
-| Rapid punches interrupt each other | Running source predates the shared block pulse | Reload the current example and confirm `BLOCK extended` appears in the log |
+| Pulses are rejected with `Stunned=true` | Block started at or after hitbox release | Increase `Parry lead`; the default is 0.10 seconds |
 | Controller remains active | Listeners were not disconnected | Press `H` or run `_G.__CodexAutoParry.Stop()` |
 
 ## Rollback
