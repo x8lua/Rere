@@ -1078,12 +1078,13 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                         local min = thisWidget.arguments.Min and getValueByIndex(thisWidget.arguments.Min, index, thisWidget.arguments :: any) or defaultMin[dataType][index]
                         local max = thisWidget.arguments.Max and getValueByIndex(thisWidget.arguments.Max, index, thisWidget.arguments :: any) or defaultMax[dataType][index]
 
-                        local SliderWidth = SliderField.AbsoluteSize.X
-                        local PaddedWidth = SliderWidth - GrabBar.AbsoluteSize.X
                         local Ratio = (value - min) / (max - min)
                         local Positions = math.floor((max - min) / increment)
                         local ClampedRatio = math.clamp(math.floor((Ratio * Positions)) / Positions, 0, 1)
-                        local PaddedRatio = ((PaddedWidth / SliderWidth) * ClampedRatio) + ((1 - (PaddedWidth / SliderWidth)) / 2)
+                        -- Keep the grab position in scale space so it is correct on the first
+                        -- render, before Roblox has calculated AbsoluteSize for the slider.
+                        local GrabScaleSize = 1 / math.floor((1 + max - min) / increment)
+                        local PaddedRatio = (GrabScaleSize / 2) + ((1 - GrabScaleSize) * ClampedRatio)
 
                         GrabBar.Position = UDim2.fromScale(PaddedRatio, 0.5)
 
