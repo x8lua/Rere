@@ -502,8 +502,26 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local ActiveDrag: Types.Input<Types.InputDataType>? = nil
         local ActiveIndex = 0
         local ActiveDataType: InputDataTypes | "" = ""
+        local ActiveInput: InputObject? = nil
 
-        local function updateActiveDrag()
+        local function inputPosition(inputObject: InputObject): Vector2
+            if inputObject.UserInputType == Enum.UserInputType.Touch or inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+                return Vector2.new(inputObject.Position.X, inputObject.Position.Y) - widgets.MouseOffset
+            end
+            return widgets.getMouseLocation()
+        end
+
+        local function isMatchingInput(inputObject: InputObject): boolean
+            if ActiveInput == nil then
+                return false
+            end
+            if ActiveInput.UserInputType == Enum.UserInputType.Touch then
+                return inputObject == ActiveInput
+            end
+            return inputObject.UserInputType == Enum.UserInputType.MouseMovement
+        end
+
+        local function updateActiveDrag(position: Vector2)
             if AnyActiveDrag == false then
                 return
             end
@@ -521,7 +539,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             end
 
             local increment = ActiveDrag.arguments.Increment and getValueByIndex(ActiveDrag.arguments.Increment, ActiveIndex, ActiveDrag.arguments :: any) or defaultIncrements[ActiveDataType][ActiveIndex]
-            local currentMouseX = widgets.getMouseLocation().X
+            local currentMouseX = position.X
             local newValue: number
 
             if ActiveDataType == "Color3" or ActiveDataType == "Color4" then
@@ -554,40 +572,46 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             ActiveDrag.lastNumberChangedTick = Iris._cycleTick + 1
         end
 
-        local function DragMouseDown(thisWidget: Types.Input<Types.InputDataType>, dataTypes: InputDataTypes, index: number, x: number, y: number)
+        local function DragMouseDown(thisWidget: Types.Input<Types.InputDataType>, dataTypes: InputDataTypes, index: number, inputObject: InputObject)
+            local position = inputPosition(inputObject)
             local currentTime = widgets.getTime()
             local isTimeValid = currentTime - thisWidget.lastClickedTime < Iris._config.MouseDoubleClickTime
             local isCtrlHeld = widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
-            if (isTimeValid and (Vector2.new(x, y) - thisWidget.lastClickedPosition).Magnitude < Iris._config.MouseDoubleClickMaxDist) or isCtrlHeld then
+            if (isTimeValid and (position - thisWidget.lastClickedPosition).Magnitude < Iris._config.MouseDoubleClickMaxDist) or isCtrlHeld then
                 thisWidget.state.editingText:set(index)
             else
                 thisWidget.lastClickedTime = currentTime
-                thisWidget.lastClickedPosition = Vector2.new(x, y)
+                thisWidget.lastClickedPosition = position
 
                 AnyActiveDrag = true
                 ActiveDrag = thisWidget
                 ActiveIndex = index
                 ActiveDataType = dataTypes
-                PreviousMouseXPosition = widgets.getMouseLocation().X
-                updateActiveDrag()
+                ActiveInput = inputObject
+                PreviousMouseXPosition = position.X
+                updateActiveDrag(position)
             end
         end
 
-        widgets.registerEvent("InputChanged", function()
-            if not Iris._started then
+        widgets.registerEvent("InputChanged", function(inputObject: InputObject)
+            if not Iris._started or not isMatchingInput(inputObject) then
                 return
             end
-            updateActiveDrag()
+            updateActiveDrag(inputPosition(inputObject))
         end)
 
         widgets.registerEvent("InputEnded", function(inputObject: InputObject)
-            if not Iris._started then
+            if not Iris._started or not AnyActiveDrag then
                 return
             end
-            if inputObject.UserInputType == Enum.UserInputType.MouseButton1 and AnyActiveDrag then
+            local isTouchRelease = ActiveInput and ActiveInput.UserInputType == Enum.UserInputType.Touch and inputObject == ActiveInput
+            local isMouseRelease = ActiveInput and ActiveInput.UserInputType == Enum.UserInputType.MouseButton1 and inputObject.UserInputType == Enum.UserInputType.MouseButton1
+            if isTouchRelease or isMouseRelease then
                 AnyActiveDrag = false
                 ActiveDrag = nil
                 ActiveIndex = 0
+                ActiveDataType = ""
+                ActiveInput = nil
             end
         end)
 
@@ -665,8 +689,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 thisWidget.state.editingText:set(index)
             end)
 
-            widgets.applyButtonDown(DragField, function(x: number, y: number)
-                DragMouseDown(thisWidget :: any, dataType, index, x, y)
+            widgets.applyInputDown(DragField, function(inputObject: InputObject)
+                DragMouseDown(thisWidget :: any, dataType, index, inputObject)
             end)
 
             return DragField
@@ -861,8 +885,26 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local ActiveSlider: Types.Input<Types.InputDataType>? = nil
         local ActiveIndex = 0
         local ActiveDataType: InputDataTypes | "" = ""
+        local ActiveInput: InputObject? = nil
 
-        local function updateActiveSlider()
+        local function inputPosition(inputObject: InputObject): Vector2
+            if inputObject.UserInputType == Enum.UserInputType.Touch or inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+                return Vector2.new(inputObject.Position.X, inputObject.Position.Y) - widgets.MouseOffset
+            end
+            return widgets.getMouseLocation()
+        end
+
+        local function isMatchingInput(inputObject: InputObject): boolean
+            if ActiveInput == nil then
+                return false
+            end
+            if ActiveInput.UserInputType == Enum.UserInputType.Touch then
+                return inputObject == ActiveInput
+            end
+            return inputObject.UserInputType == Enum.UserInputType.MouseMovement
+        end
+
+        local function updateActiveSlider(position: Vector2)
             if AnyActiveSlider == false then
                 return
             end
@@ -879,8 +921,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local max = ActiveSlider.arguments.Max and getValueByIndex(ActiveSlider.arguments.Max, ActiveIndex, ActiveSlider.arguments :: any) or defaultMax[ActiveDataType][ActiveIndex]
 
             local GrabWidth = GrabBar.AbsoluteSize.X
-            local Offset = widgets.getMouseLocation().X - (SliderField.AbsolutePosition.X - widgets.GuiOffset.X + GrabWidth / 2)
-            local Ratio = Offset / (SliderField.AbsoluteSize.X - GrabWidth)
+            local Offset = position.X - (SliderField.AbsolutePosition.X - widgets.GuiOffset.X + GrabWidth / 2)
+            local Ratio = Offset / math.max(SliderField.AbsoluteSize.X - GrabWidth, 1)
             local Positions = math.floor((max - min) / increment)
             local newValue = math.clamp(math.round(Ratio * Positions) * increment + min, min, max)
 
@@ -888,7 +930,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             ActiveSlider.lastNumberChangedTick = Iris._cycleTick + 1
         end
 
-        local function SliderMouseDown(thisWidget: Types.Input<Types.InputDataType>, dataType: InputDataTypes, index: number)
+        local function SliderMouseDown(thisWidget: Types.Input<Types.InputDataType>, dataType: InputDataTypes, index: number, inputObject: InputObject)
             local isCtrlHeld = widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
             if isCtrlHeld then
                 thisWidget.state.editingText:set(index)
@@ -897,26 +939,30 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 ActiveSlider = thisWidget
                 ActiveIndex = index
                 ActiveDataType = dataType
-                updateActiveSlider()
+                ActiveInput = inputObject
+                updateActiveSlider(inputPosition(inputObject))
             end
         end
 
-        widgets.registerEvent("InputChanged", function()
-            if not Iris._started then
+        widgets.registerEvent("InputChanged", function(inputObject: InputObject)
+            if not Iris._started or not isMatchingInput(inputObject) then
                 return
             end
-            updateActiveSlider()
+            updateActiveSlider(inputPosition(inputObject))
         end)
 
         widgets.registerEvent("InputEnded", function(inputObject: InputObject)
-            if not Iris._started then
+            if not Iris._started or not AnyActiveSlider then
                 return
             end
-            if inputObject.UserInputType == Enum.UserInputType.MouseButton1 and AnyActiveSlider then
+            local isTouchRelease = ActiveInput and ActiveInput.UserInputType == Enum.UserInputType.Touch and inputObject == ActiveInput
+            local isMouseRelease = ActiveInput and ActiveInput.UserInputType == Enum.UserInputType.MouseButton1 and inputObject.UserInputType == Enum.UserInputType.MouseButton1
+            if isTouchRelease or isMouseRelease then
                 AnyActiveSlider = false
                 ActiveSlider = nil
                 ActiveIndex = 0
                 ActiveDataType = ""
+                ActiveInput = nil
             end
         end)
 
@@ -985,8 +1031,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 thisWidget.state.editingText:set(index)
             end)
 
-            widgets.applyButtonDown(SliderField, function()
-                SliderMouseDown(thisWidget :: any, dataType, index)
+            widgets.applyInputDown(SliderField, function(inputObject: InputObject)
+                SliderMouseDown(thisWidget :: any, dataType, index, inputObject)
             end)
 
             local GrabBar = Instance.new("Frame")

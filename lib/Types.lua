@@ -335,6 +335,7 @@ export type WidgetUtility = {
 
     applyButtonClick: (thisInstance: GuiButton, callback: () -> ()) -> (),
     applyButtonDown: (thisInstance: GuiButton, callback: (x: number, y: number) -> ()) -> (),
+    applyInputDown: (thisInstance: GuiButton, callback: (input: InputObject) -> ()) -> (),
     applyMouseEnter: (thisInstance: GuiObject, callback: (x: number, y: number) -> ()) -> (),
     applyMouseMoved: (thisInstance: GuiObject, callback: (x: number, y: number) -> ()) -> (),
     applyMouseLeave: (thisInstance: GuiObject, callback: (x: number, y: number) -> ()) -> (),

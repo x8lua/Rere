@@ -48,11 +48,19 @@ function inputBegan(input: InputObject)
 end
 
 function inputChanged(input: InputObject)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+        Input.X = input.Position.X
+        Input.Y = input.Position.Y
+    end
     Input.InputChanged:Fire(input, true)
 end
 
 function inputEnded(input: InputObject)
     Input.KeyDown[input.KeyCode] = nil
+    if input.UserInputType == Enum.UserInputType.Touch then
+        Input.X = input.Position.X
+        Input.Y = input.Position.Y
+    end
     Input.InputEnded:Fire(input, true)
 end
 

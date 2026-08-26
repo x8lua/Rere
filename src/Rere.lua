@@ -3427,6 +3427,7 @@ sources[nodes['Types']] = function(script)
 
         applyButtonClick: (thisInstance: GuiButton, callback: () -> ()) -> (),
         applyButtonDown: (thisInstance: GuiButton, callback: (x: number, y: number) -> ()) -> (),
+        applyInputDown: (thisInstance: GuiButton, callback: (input: InputObject) -> ()) -> (),
         applyMouseEnter: (thisInstance: GuiObject, callback: (x: number, y: number) -> ()) -> (),
         applyMouseMoved: (thisInstance: GuiObject, callback: (x: number, y: number) -> ()) -> (),
         applyMouseLeave: (thisInstance: GuiObject, callback: (x: number, y: number) -> ()) -> (),
@@ -8955,8 +8956,26 @@ sources[nodes['widgets/Input']] = function(script)
             local ActiveDrag: Types.Input<Types.InputDataType>? = nil
             local ActiveIndex = 0
             local ActiveDataType: InputDataTypes | "" = ""
+            local ActiveInput: InputObject? = nil
 
-            local function updateActiveDrag()
+            local function inputPosition(inputObject: InputObject): Vector2
+                if inputObject.UserInputType == Enum.UserInputType.Touch or inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+                    return Vector2.new(inputObject.Position.X, inputObject.Position.Y) - widgets.MouseOffset
+                end
+                return widgets.getMouseLocation()
+            end
+
+            local function isMatchingInput(inputObject: InputObject): boolean
+                if ActiveInput == nil then
+                    return false
+                end
+                if ActiveInput.UserInputType == Enum.UserInputType.Touch then
+                    return inputObject == ActiveInput
+                end
+                return inputObject.UserInputType == Enum.UserInputType.MouseMovement
+            end
+
+            local function updateActiveDrag(position: Vector2)
                 if AnyActiveDrag == false then
                     return
                 end
@@ -8974,7 +8993,7 @@ sources[nodes['widgets/Input']] = function(script)
                 end
 
                 local increment = ActiveDrag.arguments.Increment and getValueByIndex(ActiveDrag.arguments.Increment, ActiveIndex, ActiveDrag.arguments :: any) or defaultIncrements[ActiveDataType][ActiveIndex]
-                local currentMouseX = widgets.getMouseLocation().X
+                local currentMouseX = position.X
                 local newValue: number
 
                 if ActiveDataType == "Color3" or ActiveDataType == "Color4" then
@@ -9007,40 +9026,46 @@ sources[nodes['widgets/Input']] = function(script)
                 ActiveDrag.lastNumberChangedTick = Iris._cycleTick + 1
             end
 
-            local function DragMouseDown(thisWidget: Types.Input<Types.InputDataType>, dataTypes: InputDataTypes, index: number, x: number, y: number)
+            local function DragMouseDown(thisWidget: Types.Input<Types.InputDataType>, dataTypes: InputDataTypes, index: number, inputObject: InputObject)
+                local position = inputPosition(inputObject)
                 local currentTime = widgets.getTime()
                 local isTimeValid = currentTime - thisWidget.lastClickedTime < Iris._config.MouseDoubleClickTime
                 local isCtrlHeld = widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
-                if (isTimeValid and (Vector2.new(x, y) - thisWidget.lastClickedPosition).Magnitude < Iris._config.MouseDoubleClickMaxDist) or isCtrlHeld then
+                if (isTimeValid and (position - thisWidget.lastClickedPosition).Magnitude < Iris._config.MouseDoubleClickMaxDist) or isCtrlHeld then
                     thisWidget.state.editingText:set(index)
                 else
                     thisWidget.lastClickedTime = currentTime
-                    thisWidget.lastClickedPosition = Vector2.new(x, y)
+                    thisWidget.lastClickedPosition = position
 
                     AnyActiveDrag = true
                     ActiveDrag = thisWidget
                     ActiveIndex = index
                     ActiveDataType = dataTypes
-                    PreviousMouseXPosition = widgets.getMouseLocation().X
-                    updateActiveDrag()
+                    ActiveInput = inputObject
+                    PreviousMouseXPosition = position.X
+                    updateActiveDrag(position)
                 end
             end
 
-            widgets.registerEvent("InputChanged", function()
-                if not Iris._started then
+            widgets.registerEvent("InputChanged", function(inputObject: InputObject)
+                if not Iris._started or not isMatchingInput(inputObject) then
                     return
                 end
-                updateActiveDrag()
+                updateActiveDrag(inputPosition(inputObject))
             end)
 
             widgets.registerEvent("InputEnded", function(inputObject: InputObject)
-                if not Iris._started then
+                if not Iris._started or not AnyActiveDrag then
                     return
                 end
-                if inputObject.UserInputType == Enum.UserInputType.MouseButton1 and AnyActiveDrag then
+                local isTouchRelease = ActiveInput and ActiveInput.UserInputType == Enum.UserInputType.Touch and inputObject == ActiveInput
+                local isMouseRelease = ActiveInput and ActiveInput.UserInputType == Enum.UserInputType.MouseButton1 and inputObject.UserInputType == Enum.UserInputType.MouseButton1
+                if isTouchRelease or isMouseRelease then
                     AnyActiveDrag = false
                     ActiveDrag = nil
                     ActiveIndex = 0
+                    ActiveDataType = ""
+                    ActiveInput = nil
                 end
             end)
 
@@ -9118,8 +9143,8 @@ sources[nodes['widgets/Input']] = function(script)
                     thisWidget.state.editingText:set(index)
                 end)
 
-                widgets.applyButtonDown(DragField, function(x: number, y: number)
-                    DragMouseDown(thisWidget :: any, dataType, index, x, y)
+                widgets.applyInputDown(DragField, function(inputObject: InputObject)
+                    DragMouseDown(thisWidget :: any, dataType, index, inputObject)
                 end)
 
                 return DragField
@@ -9314,8 +9339,26 @@ sources[nodes['widgets/Input']] = function(script)
             local ActiveSlider: Types.Input<Types.InputDataType>? = nil
             local ActiveIndex = 0
             local ActiveDataType: InputDataTypes | "" = ""
+            local ActiveInput: InputObject? = nil
 
-            local function updateActiveSlider()
+            local function inputPosition(inputObject: InputObject): Vector2
+                if inputObject.UserInputType == Enum.UserInputType.Touch or inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+                    return Vector2.new(inputObject.Position.X, inputObject.Position.Y) - widgets.MouseOffset
+                end
+                return widgets.getMouseLocation()
+            end
+
+            local function isMatchingInput(inputObject: InputObject): boolean
+                if ActiveInput == nil then
+                    return false
+                end
+                if ActiveInput.UserInputType == Enum.UserInputType.Touch then
+                    return inputObject == ActiveInput
+                end
+                return inputObject.UserInputType == Enum.UserInputType.MouseMovement
+            end
+
+            local function updateActiveSlider(position: Vector2)
                 if AnyActiveSlider == false then
                     return
                 end
@@ -9332,8 +9375,8 @@ sources[nodes['widgets/Input']] = function(script)
                 local max = ActiveSlider.arguments.Max and getValueByIndex(ActiveSlider.arguments.Max, ActiveIndex, ActiveSlider.arguments :: any) or defaultMax[ActiveDataType][ActiveIndex]
 
                 local GrabWidth = GrabBar.AbsoluteSize.X
-                local Offset = widgets.getMouseLocation().X - (SliderField.AbsolutePosition.X - widgets.GuiOffset.X + GrabWidth / 2)
-                local Ratio = Offset / (SliderField.AbsoluteSize.X - GrabWidth)
+                local Offset = position.X - (SliderField.AbsolutePosition.X - widgets.GuiOffset.X + GrabWidth / 2)
+                local Ratio = Offset / math.max(SliderField.AbsoluteSize.X - GrabWidth, 1)
                 local Positions = math.floor((max - min) / increment)
                 local newValue = math.clamp(math.round(Ratio * Positions) * increment + min, min, max)
 
@@ -9341,7 +9384,7 @@ sources[nodes['widgets/Input']] = function(script)
                 ActiveSlider.lastNumberChangedTick = Iris._cycleTick + 1
             end
 
-            local function SliderMouseDown(thisWidget: Types.Input<Types.InputDataType>, dataType: InputDataTypes, index: number)
+            local function SliderMouseDown(thisWidget: Types.Input<Types.InputDataType>, dataType: InputDataTypes, index: number, inputObject: InputObject)
                 local isCtrlHeld = widgets.UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or widgets.UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
                 if isCtrlHeld then
                     thisWidget.state.editingText:set(index)
@@ -9350,26 +9393,30 @@ sources[nodes['widgets/Input']] = function(script)
                     ActiveSlider = thisWidget
                     ActiveIndex = index
                     ActiveDataType = dataType
-                    updateActiveSlider()
+                    ActiveInput = inputObject
+                    updateActiveSlider(inputPosition(inputObject))
                 end
             end
 
-            widgets.registerEvent("InputChanged", function()
-                if not Iris._started then
+            widgets.registerEvent("InputChanged", function(inputObject: InputObject)
+                if not Iris._started or not isMatchingInput(inputObject) then
                     return
                 end
-                updateActiveSlider()
+                updateActiveSlider(inputPosition(inputObject))
             end)
 
             widgets.registerEvent("InputEnded", function(inputObject: InputObject)
-                if not Iris._started then
+                if not Iris._started or not AnyActiveSlider then
                     return
                 end
-                if inputObject.UserInputType == Enum.UserInputType.MouseButton1 and AnyActiveSlider then
+                local isTouchRelease = ActiveInput and ActiveInput.UserInputType == Enum.UserInputType.Touch and inputObject == ActiveInput
+                local isMouseRelease = ActiveInput and ActiveInput.UserInputType == Enum.UserInputType.MouseButton1 and inputObject.UserInputType == Enum.UserInputType.MouseButton1
+                if isTouchRelease or isMouseRelease then
                     AnyActiveSlider = false
                     ActiveSlider = nil
                     ActiveIndex = 0
                     ActiveDataType = ""
+                    ActiveInput = nil
                 end
             end)
 
@@ -9438,8 +9485,8 @@ sources[nodes['widgets/Input']] = function(script)
                     thisWidget.state.editingText:set(index)
                 end)
 
-                widgets.applyButtonDown(SliderField, function()
-                    SliderMouseDown(thisWidget :: any, dataType, index)
+                widgets.applyInputDown(SliderField, function(inputObject: InputObject)
+                    SliderMouseDown(thisWidget :: any, dataType, index, inputObject)
                 end)
 
                 local GrabBar = Instance.new("Frame")
@@ -12828,11 +12875,46 @@ sources[nodes['widgets/Window']] = function(script)
         local resizeFromLeftRight = Enum.LeftRight.Left
 
         local lastCursorPosition: Vector2
+        local activeWindowInput: InputObject? = nil
+
+        local function inputPosition(input: InputObject): Vector2
+            if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+                return Vector2.new(input.Position.X, input.Position.Y) - widgets.MouseOffset
+            end
+            return widgets.getMouseLocation()
+        end
+
+        local function isMatchingWindowInput(input: InputObject): boolean
+            if activeWindowInput == nil then
+                return false
+            end
+            if activeWindowInput.UserInputType == Enum.UserInputType.Touch then
+                return input == activeWindowInput
+            end
+            return input.UserInputType == Enum.UserInputType.MouseMovement
+        end
 
         local focusedWindow: Types.Window? -- window with focus, may be nil
         local anyFocusedWindow = false -- is there any focused window?
 
         local windowWidgets: { [Types.ID]: Types.Window } = {} -- array of widget objects of type window
+
+        local function getInterfaceScale(thisWidget: Types.Window): number
+            local WindowButton = thisWidget.Instance:FindFirstChild("WindowButton")
+            local InterfaceScale = WindowButton and WindowButton:FindFirstChild("InterfaceScale")
+            if InterfaceScale and InterfaceScale:IsA("UIScale") then
+                return InterfaceScale.Scale
+            end
+            return 1.2
+        end
+
+        local function calculateInterfaceScale(thisWidget: Types.Window): number
+            local screenSize = widgets.getScreenSizeForWindow(thisWidget)
+            if not widgets.UserInputService.TouchEnabled then
+                return 1.2
+            end
+            return math.clamp(screenSize.X / 480, 0.75, 1.2)
+        end
 
         local function quickSwapWindows()
             -- ctrl + tab swapping functionality
@@ -12871,7 +12953,7 @@ sources[nodes['widgets/Window']] = function(script)
             local usableSize = widgets.getScreenSizeForWindow(thisWidget)
             local safeAreaPadding = Vector2.new(Iris._config.WindowBorderSize + Iris._config.DisplaySafeAreaPadding.X, Iris._config.WindowBorderSize + Iris._config.DisplaySafeAreaPadding.Y)
 
-            local maxWindowSize = (usableSize - windowSize - safeAreaPadding)
+            local maxWindowSize = (usableSize - windowSize - safeAreaPadding) / getInterfaceScale(thisWidget)
             return Vector2.new(math.clamp(intentedSize.X, minWindowSize, math.max(maxWindowSize.X, minWindowSize)), math.clamp(intentedSize.Y, minWindowSize, math.max(maxWindowSize.Y, minWindowSize)))
         end
 
@@ -12977,9 +13059,7 @@ sources[nodes['widgets/Window']] = function(script)
             end
 
             if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-                local position = if input.UserInputType == Enum.UserInputType.Touch
-                    then Vector2.new(input.Position.X, input.Position.Y)
-                    else widgets.getMouseLocation()
+                local position = inputPosition(input)
 
                 for _, window in windowWidgets do
                     local Window = window.Instance
@@ -12988,6 +13068,7 @@ sources[nodes['widgets/Window']] = function(script)
                         if TitleBar and widgets.isPosInsideRect(position, TitleBar.AbsolutePosition - widgets.GuiOffset, TitleBar.AbsolutePosition - widgets.GuiOffset + TitleBar.AbsoluteSize) then
                             dragWindow = window
                             isDragging = true
+                            activeWindowInput = input
                             moveDeltaCursorPosition = position - window.state.position.value
                             break
                         end
@@ -13009,6 +13090,8 @@ sources[nodes['widgets/Window']] = function(script)
                 end
                 isResizing = true
                 resizeWindow = focusedWindow
+                activeWindowInput = input
+                lastCursorPosition = inputPosition(input)
             end
         end)
 
@@ -13025,14 +13108,11 @@ sources[nodes['widgets/Window']] = function(script)
             if not Iris._started then
                 return
             end
+            if not isMatchingWindowInput(input) then
+                return
+            end
             if isDragging and dragWindow then
-                local mouseLocation
-                if input.UserInputType == Enum.UserInputType.Touch then
-                    local location = input.Position
-                    mouseLocation = Vector2.new(location.X, location.Y)
-                else
-                    mouseLocation = widgets.getMouseLocation()
-                end
+                local mouseLocation = inputPosition(input)
                 local Window = dragWindow.Instance :: Frame
                 local dragInstance: TextButton = Window.WindowButton
                 local intendedPosition = mouseLocation - moveDeltaCursorPosition
@@ -13072,7 +13152,7 @@ sources[nodes['widgets/Window']] = function(script)
                 resizeWindow.state.position.value = newPosition
             end
 
-            lastCursorPosition = widgets.getMouseLocation()
+            lastCursorPosition = inputPosition(input)
         end)
 
         widgets.registerEvent("InputEnded", function(input, _)
@@ -13080,16 +13160,28 @@ sources[nodes['widgets/Window']] = function(script)
                 return
             end
             if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and isDragging and dragWindow then
-                local Window = dragWindow.Instance :: Frame
-                local dragInstance: TextButton = Window.WindowButton
-                isDragging = false
-                dragWindow.state.position:set(Vector2.new(dragInstance.Position.X.Offset, dragInstance.Position.Y.Offset))
+                local isTouchRelease = activeWindowInput and activeWindowInput.UserInputType == Enum.UserInputType.Touch and input == activeWindowInput
+                local isMouseRelease = activeWindowInput and activeWindowInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1
+                if isTouchRelease or isMouseRelease then
+                    local Window = dragWindow.Instance :: Frame
+                    local dragInstance: TextButton = Window.WindowButton
+                    isDragging = false
+                    dragWindow.state.position:set(Vector2.new(dragInstance.Position.X.Offset, dragInstance.Position.Y.Offset))
+                    dragWindow = nil
+                    activeWindowInput = nil
+                end
             end
             if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and isResizing and resizeWindow then
-                local Window = resizeWindow.Instance :: Instance
-                isResizing = false
-                local resizeInstance: TextButton = Window.WindowButton
-                resizeWindow.state.size:set(Vector2.new(resizeInstance.Size.X.Offset, resizeInstance.Size.Y.Offset))
+                local isTouchRelease = activeWindowInput and activeWindowInput.UserInputType == Enum.UserInputType.Touch and input == activeWindowInput
+                local isMouseRelease = activeWindowInput and activeWindowInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1
+                if isTouchRelease or isMouseRelease then
+                    local Window = resizeWindow.Instance :: Instance
+                    isResizing = false
+                    local resizeInstance: TextButton = Window.WindowButton
+                    resizeWindow.state.size:set(Vector2.new(resizeInstance.Size.X.Offset, resizeInstance.Size.Y.Offset))
+                    resizeWindow = nil
+                    activeWindowInput = nil
+                end
             end
 
             if input.KeyCode == Enum.KeyCode.ButtonX then
@@ -13192,6 +13284,7 @@ sources[nodes['widgets/Window']] = function(script)
                 InterfaceScale.Parent = WindowButton
 
                 WindowButton.Parent = Window
+                InterfaceScale.Scale = calculateInterfaceScale(thisWidget)
 
                 widgets.applyInputBegan(WindowButton, function(input)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Keyboard then
@@ -13412,7 +13505,7 @@ sources[nodes['widgets/Window']] = function(script)
                     ActiveTransparency = Iris._config.ResizeGripActiveTransparency,
                 })
 
-                widgets.applyButtonDown(LeftResizeGrip, function()
+                widgets.applyInputDown(LeftResizeGrip, function(input: InputObject)
                     if not anyFocusedWindow or not (focusedWindow == thisWidget) then
                         Iris.SetFocusedWindow(thisWidget)
                         -- mitigating wrong focus when clicking on buttons inside of a window without clicking the window itself
@@ -13421,6 +13514,8 @@ sources[nodes['widgets/Window']] = function(script)
                     resizeFromTopBottom = Enum.TopBottom.Bottom
                     resizeFromLeftRight = Enum.LeftRight.Left
                     resizeWindow = thisWidget
+                    activeWindowInput = input
+                    lastCursorPosition = inputPosition(input)
                 end)
 
                 -- each border uses an image, allowing it to have a visible borde which is larger than the UI
@@ -13448,7 +13543,7 @@ sources[nodes['widgets/Window']] = function(script)
                     ActiveTransparency = Iris._config.ResizeGripActiveTransparency,
                 })
 
-                widgets.applyButtonDown(RightResizeGrip, function()
+                widgets.applyInputDown(RightResizeGrip, function(input: InputObject)
                     if not anyFocusedWindow or not (focusedWindow == thisWidget) then
                         Iris.SetFocusedWindow(thisWidget)
                         -- mitigating wrong focus when clicking on buttons inside of a window without clicking the window itself
@@ -13457,6 +13552,8 @@ sources[nodes['widgets/Window']] = function(script)
                     resizeFromTopBottom = Enum.TopBottom.Bottom
                     resizeFromLeftRight = Enum.LeftRight.Right
                     resizeWindow = thisWidget
+                    activeWindowInput = input
+                    lastCursorPosition = inputPosition(input)
                 end)
 
                 local LeftResizeBorder = Instance.new("ImageButton")
@@ -13708,6 +13805,7 @@ sources[nodes['widgets/Window']] = function(script)
                 local Window = thisWidget.Instance :: Frame
                 local ChildContainer = thisWidget.ChildContainer :: ScrollingFrame
                 local WindowButton = Window.WindowButton :: TextButton
+                local InterfaceScale = WindowButton.InterfaceScale :: UIScale
                 local Content = WindowButton.Content :: Frame
                 local TitleBar = Content.TitleBar :: Frame
                 local MenuBar: Frame? = Content:FindFirstChild("Iris_MenuBar")
@@ -13717,6 +13815,11 @@ sources[nodes['widgets/Window']] = function(script)
                 local RightResizeBorder: Frame = WindowButton.RightResizeBorder
                 local TopResizeBorder: Frame = WindowButton.TopResizeBorder
                 local BottomResizeBorder: Frame = WindowButton.BottomResizeBorder
+
+                local targetScale = calculateInterfaceScale(thisWidget)
+                if InterfaceScale.Scale ~= targetScale then
+                    InterfaceScale.Scale = targetScale
+                end
 
                 WindowButton.Size = UDim2.fromOffset(stateSize.X, stateSize.Y)
                 WindowButton.Position = UDim2.fromOffset(statePosition.X, statePosition.Y)
@@ -14114,6 +14217,14 @@ sources[nodes['widgets']] = function(script)
             thisInstance.MouseButton1Down:Connect(function(x: number, y: number)
                 local position = Vector2.new(x, y) - widgets.MouseOffset
                 callback(position.X, position.Y)
+            end)
+        end
+
+        function widgets.applyInputDown(thisInstance: GuiButton, callback: (input: InputObject) -> ())
+            thisInstance.InputBegan:Connect(function(input: InputObject)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    callback(input)
+                end
             end)
         end
 

@@ -281,6 +281,14 @@ return function(Iris: Types.Internal)
         end)
     end
 
+    function widgets.applyInputDown(thisInstance: GuiButton, callback: (input: InputObject) -> ())
+        thisInstance.InputBegan:Connect(function(input: InputObject)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                callback(input)
+            end
+        end)
+    end
+
     function widgets.applyMouseEnter(thisInstance: GuiObject, callback: (x: number, y: number) -> ())
         thisInstance.MouseEnter:Connect(function(x: number, y: number)
             local position = Vector2.new(x, y) - widgets.MouseOffset
