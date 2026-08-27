@@ -197,3 +197,7 @@ so make sure that IgnoreGuiInset agrees with the value (false when CoreUISafeIns
 | ZIndexOffset            | `0`                                  | Unused                                                                |
 | MouseDoubleClickTime    | `0.30`                               | Time for a double-click, in seconds                                   |
 | MouseDoubleClickMaxDist | `6.0`                                | Distance threshold to stay in to validate a double-click, in pixels   |
+
+On touch-enabled devices, Iris automatically applies a `UIScale` to each window
+based on the shortest viewport axis. This keeps controls at a usable size in both
+portrait and landscape orientations; window resizing accounts for the applied scale.

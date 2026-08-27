@@ -12899,6 +12899,12 @@ sources[nodes['widgets/Window']] = function(script)
 
         local windowWidgets: { [Types.ID]: Types.Window } = {} -- array of widget objects of type window
 
+        -- Mobile layouts should remain usable in either orientation. The shortest
+        -- viewport axis is the limiting dimension for readable controls.
+        local MOBILE_REFERENCE_AXIS = 480
+        local MOBILE_MIN_SCALE = 0.75
+        local MOBILE_MAX_SCALE = 1.2
+
         local function getInterfaceScale(thisWidget: Types.Window): number
             local WindowButton = thisWidget.Instance:FindFirstChild("WindowButton")
             local InterfaceScale = WindowButton and WindowButton:FindFirstChild("InterfaceScale")
@@ -12911,9 +12917,10 @@ sources[nodes['widgets/Window']] = function(script)
         local function calculateInterfaceScale(thisWidget: Types.Window): number
             local screenSize = widgets.getScreenSizeForWindow(thisWidget)
             if not widgets.UserInputService.TouchEnabled then
-                return 1.2
+                return MOBILE_MAX_SCALE
             end
-            return math.clamp(screenSize.X / 480, 0.75, 1.2)
+            local limitingAxis = math.min(screenSize.X, screenSize.Y)
+            return math.clamp(limitingAxis / MOBILE_REFERENCE_AXIS, MOBILE_MIN_SCALE, MOBILE_MAX_SCALE)
         end
 
         local function quickSwapWindows()
@@ -13130,9 +13137,9 @@ sources[nodes['widgets/Window']] = function(script)
 
                 local mouseDelta
                 if input.UserInputType == Enum.UserInputType.Touch then
-                    mouseDelta = input.Delta
+                    mouseDelta = input.Delta / getInterfaceScale(resizeWindow)
                 else
-                    mouseDelta = widgets.getMouseLocation() - lastCursorPosition
+                    mouseDelta = (widgets.getMouseLocation() - lastCursorPosition) / getInterfaceScale(resizeWindow)
                 end
 
                 local intendedPosition = windowPosition + Vector2.new(if resizeFromLeftRight == Enum.LeftRight.Left then mouseDelta.X else 0, if resizeFromTopBottom == Enum.TopBottom.Top then mouseDelta.Y else 0)
@@ -13284,7 +13291,6 @@ sources[nodes['widgets/Window']] = function(script)
                 InterfaceScale.Parent = WindowButton
 
                 WindowButton.Parent = Window
-                InterfaceScale.Scale = calculateInterfaceScale(thisWidget)
 
                 widgets.applyInputBegan(WindowButton, function(input)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Keyboard then

@@ -8,6 +8,10 @@ if (-not $source.Contains('if ok and isGuiParent(container) then')) { throw "Uns
 if (-not $source.Contains('if ok and isGuiParent(coreGui) then')) { throw "CoreGui must be validated before use" }
 if (-not $source.Contains('Rere: could not resolve a GUI-capable parent')) { throw "Missing GUI parent resolution error" }
 if (-not $source.Contains('if not isGuiParent(parentInstance) then')) { throw "Init must recover from an incompatible explicit parent" }
+if (-not $source.Contains('local MOBILE_REFERENCE_AXIS = 480')) { throw "Missing mobile interface scale reference" }
+if (-not $source.Contains('local limitingAxis = math.min(screenSize.X, screenSize.Y)')) { throw "Mobile interface scale must use the limiting viewport axis" }
+if (-not $source.Contains('mouseDelta = input.Delta / getInterfaceScale(resizeWindow)')) { throw "Touch resize delta must account for interface scale" }
+if ($source -match 'WindowButton\.Parent = Window\s+InterfaceScale\.Scale = calculateInterfaceScale\(thisWidget\)') { throw "Mobile scale must be calculated after the window is parented" }
 if ([regex]::Matches($source, 'local OpenTweenInfo = TweenInfo.new\(0.1').Count -ne 2) { throw "Combo and section durations must both be 0.1 seconds" }
 if (-not $source.Contains('local TargetRotation = if IsOpened then 90 else 0')) { throw "Missing Combo arrow direction state" }
 if ([regex]::Matches($source, 'ArrowGlyph\.Rotation = TargetRotation').Count -ne 1) { throw "Missing arrow glyph rotation initialization" }
