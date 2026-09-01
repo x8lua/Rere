@@ -98,9 +98,10 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         GenerateState = function(thisWidget: Types.Selectable)
             if thisWidget.state.index == nil then
                 if thisWidget.arguments.Index ~= nil then
-                    error("A shared state index is required for Iris.Selectables() with an Index argument.", 5)
+                    thisWidget.state.index = Iris._widgetState(thisWidget, "index", thisWidget.arguments.Index)
+                else
+                    thisWidget.state.index = Iris._widgetState(thisWidget, "index", false)
                 end
-                thisWidget.state.index = Iris._widgetState(thisWidget, "index", false)
             end
         end,
         Update = function(thisWidget: Types.Selectable)
@@ -112,7 +113,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local Selectable = thisWidget.Instance :: Frame
             local SelectableButton: TextButton = Selectable.SelectableButton
             
-            if thisWidget.state.index.value == thisWidget.arguments.Index or thisWidget.state.index.value == true then
+            local isSelected = (thisWidget.state.index.value == thisWidget.arguments.Index) or (thisWidget.arguments.Index == true) or (thisWidget.state.index.value == true)
+            if isSelected then
                 thisWidget.ButtonColors.Transparency = Iris._config.HeaderTransparency
                 SelectableButton.BackgroundTransparency = Iris._config.HeaderTransparency
                 thisWidget.lastSelectedTick = Iris._cycleTick + 1
