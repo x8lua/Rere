@@ -7,11 +7,46 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         Args = {
             ["Text"] = 1,
             ["Size"] = 2,
+            ["Disabled"] = 3,
+            ["DisabledReason"] = 4,
         },
         Events = {
-            ["clicked"] = widgets.EVENTS.click(function(thisWidget: Types.Widget)
-                return thisWidget.Instance
-            end),
+            ["clicked"] = {
+                ["Init"] = function(thisWidget: Types.Widget & Types.Clicked)
+                    local clickedGuiObject = thisWidget.Instance :: GuiButton
+                    thisWidget.lastClickedTick = -1
+
+                    widgets.applyButtonClick(clickedGuiObject, function()
+                        if not thisWidget.arguments.Disabled then
+                            thisWidget.lastClickedTick = Iris._cycleTick + 1
+                        end
+                    end)
+                end,
+                ["Get"] = function(thisWidget: Types.Widget & Types.Clicked)
+                    if thisWidget.arguments.Disabled then
+                        return false
+                    end
+                    return thisWidget.lastClickedTick == Iris._cycleTick
+                end,
+            },
+            ["declined"] = {
+                ["Init"] = function(thisWidget: Types.Widget)
+                    local clickedGuiObject = thisWidget.Instance :: GuiButton
+                    thisWidget.lastDeclinedTick = -1
+
+                    widgets.applyButtonClick(clickedGuiObject, function()
+                        if thisWidget.arguments.Disabled then
+                            thisWidget.lastDeclinedTick = Iris._cycleTick + 1
+                        end
+                    end)
+                end,
+                ["Get"] = function(thisWidget: Types.Widget)
+                    if not thisWidget.arguments.Disabled then
+                        return false
+                    end
+                    return thisWidget.lastDeclinedTick == Iris._cycleTick
+                end,
+            },
             ["rightClicked"] = widgets.EVENTS.rightClick(function(thisWidget: Types.Widget)
                 return thisWidget.Instance
             end),
@@ -38,14 +73,50 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
             widgets.applyFrameStyle(Button)
 
-            widgets.applyInteractionHighlights("Background", Button, Button, {
-                Color = Iris._config.ButtonColor,
-                Transparency = Iris._config.ButtonTransparency,
-                HoveredColor = Iris._config.ButtonHoveredColor,
-                HoveredTransparency = Iris._config.ButtonHoveredTransparency,
-                ActiveColor = Iris._config.ButtonActiveColor,
-                ActiveTransparency = Iris._config.ButtonActiveTransparency,
-            })
+            widgets.applyMouseEnter(Button, function()
+                if _thisWidget.arguments and _thisWidget.arguments.Disabled then return end
+                Button.BackgroundColor3 = Iris._config.ButtonHoveredColor
+                Button.BackgroundTransparency = Iris._config.ButtonHoveredTransparency
+            end)
+
+            widgets.applyMouseLeave(Button, function()
+                if _thisWidget.arguments and _thisWidget.arguments.Disabled then
+                    Button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+                    Button.BackgroundTransparency = 0.2
+                    return
+                end
+                Button.BackgroundColor3 = Iris._config.ButtonColor
+                Button.BackgroundTransparency = Iris._config.ButtonTransparency
+            end)
+
+            widgets.applyInputBegan(Button, function(input: InputObject)
+                if _thisWidget.arguments and _thisWidget.arguments.Disabled then return end
+                if not (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Gamepad1) then
+                    return
+                end
+                Button.BackgroundColor3 = Iris._config.ButtonActiveColor
+                Button.BackgroundTransparency = Iris._config.ButtonActiveTransparency
+            end)
+
+            widgets.applyInputEnded(Button, function(input: InputObject)
+                if _thisWidget.arguments and _thisWidget.arguments.Disabled then
+                    Button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+                    Button.BackgroundTransparency = 0.2
+                    return
+                end
+                if not (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Gamepad1) then
+                    return
+                end
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    Button.BackgroundColor3 = Iris._config.ButtonHoveredColor
+                    Button.BackgroundTransparency = Iris._config.ButtonHoveredTransparency
+                else
+                    Button.BackgroundColor3 = Iris._config.ButtonColor
+                    Button.BackgroundTransparency = Iris._config.ButtonTransparency
+                end
+            end)
+
+            Button.SelectionImageObject = Iris.SelectionImageObject
 
             return Button
         end,
@@ -53,6 +124,17 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local Button = thisWidget.Instance :: TextButton
             Button.Text = thisWidget.arguments.Text or "Button"
             Button.Size = thisWidget.arguments.Size or UDim2.fromOffset(0, 0)
+
+            if thisWidget.arguments.Disabled then
+                Button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+                Button.BackgroundTransparency = 0.25
+                Button.TextColor3 = Color3.fromRGB(90, 90, 95)
+                Button.AutoButtonColor = false
+            else
+                Button.BackgroundColor3 = Iris._config.ButtonColor
+                Button.BackgroundTransparency = Iris._config.ButtonTransparency
+                Button.TextColor3 = Iris._config.TextColor
+            end
         end,
         Discard = function(thisWidget: Types.Button)
             thisWidget.Instance:Destroy()
