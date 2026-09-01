@@ -19,10 +19,13 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         Generate = function(_thisWidget: Types.Text)
             local Text = Instance.new("TextLabel")
             Text.Name = "Iris_Text"
-            Text.AutomaticSize = Enum.AutomaticSize.XY
-            Text.Size = UDim2.fromOffset(0, 0)
+            Text.AutomaticSize = Enum.AutomaticSize.Y
+            Text.Size = UDim2.new(1, 0, 0, 0)
             Text.BackgroundTransparency = 1
             Text.BorderSizePixel = 0
+            Text.TextWrapped = true
+            Text.TextXAlignment = Enum.TextXAlignment.Left
+            Text.TextYAlignment = Enum.TextYAlignment.Top
 
             widgets.applyTextStyle(Text)
             widgets.UIPadding(Text, Vector2.new(0, 2))
@@ -34,10 +37,14 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             if thisWidget.arguments.Text == nil then
                 error("Text argument is required for Iris.Text().", 5)
             end
-            if thisWidget.arguments.Wrapped ~= nil then
-                Text.TextWrapped = thisWidget.arguments.Wrapped
+            local shouldWrap = if thisWidget.arguments.Wrapped ~= nil then thisWidget.arguments.Wrapped else true
+            Text.TextWrapped = shouldWrap
+            if shouldWrap then
+                Text.AutomaticSize = Enum.AutomaticSize.Y
+                Text.Size = UDim2.new(1, 0, 0, 0)
             else
-                Text.TextWrapped = Iris._config.TextWrapped
+                Text.AutomaticSize = Enum.AutomaticSize.XY
+                Text.Size = UDim2.fromOffset(0, 0)
             end
             if thisWidget.arguments.Color then
                 Text.TextColor3 = thisWidget.arguments.Color

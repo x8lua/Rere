@@ -464,10 +464,17 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
                     local TextLabel = Instance.new("TextLabel")
                     TextLabel.Name = "TextLabel"
-                    TextLabel.AutomaticSize = Enum.AutomaticSize.XY
+                    TextLabel.AutomaticSize = Enum.AutomaticSize.Y
+                    TextLabel.Size = UDim2.new(0, 0, 0, 0)
                     TextLabel.BackgroundTransparency = 1
                     TextLabel.BorderSizePixel = 0
+                    TextLabel.TextWrapped = true
+                    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
                     TextLabel.LayoutOrder = 7
+
+                    local TextFlexItem = Instance.new("UIFlexItem")
+                    TextFlexItem.FlexMode = Enum.UIFlexMode.Fill
+                    TextFlexItem.Parent = TextLabel
 
                     widgets.applyTextStyle(TextLabel)
 
@@ -746,10 +753,17 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
                     local TextLabel = Instance.new("TextLabel")
                     TextLabel.Name = "TextLabel"
-                    TextLabel.AutomaticSize = Enum.AutomaticSize.XY
+                    TextLabel.AutomaticSize = Enum.AutomaticSize.Y
+                    TextLabel.Size = UDim2.new(0, 0, 0, 0)
                     TextLabel.BackgroundTransparency = 1
                     TextLabel.BorderSizePixel = 0
+                    TextLabel.TextWrapped = true
+                    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
                     TextLabel.LayoutOrder = 6
+
+                    local TextFlexItem = Instance.new("UIFlexItem")
+                    TextFlexItem.FlexMode = Enum.UIFlexMode.Fill
+                    TextFlexItem.Parent = TextLabel
 
                     widgets.applyTextStyle(TextLabel)
 
@@ -1091,10 +1105,17 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
                     local TextLabel = Instance.new("TextLabel")
                     TextLabel.Name = "TextLabel"
-                    TextLabel.AutomaticSize = Enum.AutomaticSize.XY
+                    TextLabel.AutomaticSize = Enum.AutomaticSize.Y
+                    TextLabel.Size = UDim2.new(0, 0, 0, 0)
                     TextLabel.BackgroundTransparency = 1
                     TextLabel.BorderSizePixel = 0
+                    TextLabel.TextWrapped = true
+                    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
                     TextLabel.LayoutOrder = 5
+
+                    local TextFlexItem = Instance.new("UIFlexItem")
+                    TextFlexItem.FlexMode = Enum.UIFlexMode.Fill
+                    TextFlexItem.Parent = TextLabel
 
                     widgets.applyTextStyle(TextLabel)
 
@@ -1281,11 +1302,17 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
             local TextLabel: TextLabel = Instance.new("TextLabel")
             TextLabel.Name = "TextLabel"
-            TextLabel.AutomaticSize = Enum.AutomaticSize.X
-            TextLabel.Size = UDim2.fromOffset(0, frameHeight)
+            TextLabel.AutomaticSize = Enum.AutomaticSize.Y
+            TextLabel.Size = UDim2.new(0, 0, 0, frameHeight)
             TextLabel.BackgroundTransparency = 1
             TextLabel.BorderSizePixel = 0
+            TextLabel.TextWrapped = true
+            TextLabel.TextXAlignment = Enum.TextXAlignment.Left
             TextLabel.LayoutOrder = 1
+
+            local TextFlexItem = Instance.new("UIFlexItem")
+            TextFlexItem.FlexMode = Enum.UIFlexMode.Fill
+            TextFlexItem.Parent = TextLabel
 
             widgets.applyTextStyle(TextLabel)
 
