@@ -28,6 +28,10 @@ Iris.Version = "0.1.25"
 function Iris:GetVersion(): string
     return self.Version
 end
+
+function Iris.ShowFatalError(errMessage: any)
+    Internal._HandleFatalError(errMessage)
+end
 local function isGuiParent(container: unknown): boolean
     if typeof(container) ~= "Instance" then
         return false

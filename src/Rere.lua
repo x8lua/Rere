@@ -2146,35 +2146,22 @@ sources[nodes['Internal']] = function(script)
     local Types = require(script.Parent.Types)
 
     return function(Iris: Types.Iris): Types.Internal
-        --[=[
-            @class Internal
-            An internal class within Iris containing all the backend data and functions for Iris to operate.
-            It is recommended that you don't generally interact with Internal unless you understand what you are doing.
-        ]=]
         local Internal = {} :: Types.Internal
 
-        --[[
-            ---------------------------------
-                [SECTION] Properties
-            ---------------------------------
-        ]]
+        Internal._version = [[ 2.5.2 ]]
 
-        Internal._version = [[ 2.5.1 ]]
-
-        Internal._started = false -- has Iris.connect been called yet
+        Internal._started = false
         Internal._shutdown = false
-        Internal._cycleTick = 0 -- increments for each call to Cycle, used to determine the relative age and freshness of generated widgets
+        Internal._cycleTick = 0
         Internal._deltaTime = 0
 
-        -- Refresh
-        Internal._globalRefreshRequested = false -- refresh means that all GUI is destroyed and regenerated, usually because a style change was made and needed to be propogated to all UI
-        Internal._refreshCounter = 0 -- if true, when _Insert is called, the widget called will be regenerated
+        Internal._globalRefreshRequested = false
+        Internal._refreshCounter = 0
         Internal._refreshLevel = 1
         Internal._refreshStack = table.create(16)
 
-        -- Widgets & Instances
         Internal._widgets = {}
-        Internal._stackIndex = 1 -- Points to the index that IDStack is currently in, when computing cycle
+        Internal._stackIndex = 1
         Internal._rootInstance = nil
         Internal._rootWidget = {
             ID = "R",
@@ -2183,38 +2170,224 @@ sources[nodes['Internal']] = function(script)
             ZIndex = 0,
             ZOffset = 0,
         }
-        Internal._lastWidget = Internal._rootWidget -- widget which was most recently rendered
+        Internal._lastWidget = Internal._rootWidget
 
-        -- Config
-        Internal._rootConfig = {} -- root style which all widgets derive from
+        Internal._rootConfig = {}
         Internal._config = Internal._rootConfig
 
-        -- ID
         Internal._IDStack = { "R" }
-        Internal._usedIDs = {} -- hash of IDs which are already used in a cycle, value is the # of occurances so that getID can assign a unique ID for each occurance
+        Internal._usedIDs = {}
         Internal._pushedIds = {}
         Internal._newID = false
         Internal._nextWidgetId = nil
 
-        -- State
-        Internal._states = {} -- Iris.States
+        Internal._states = {}
 
-        -- Callback
         Internal._postCycleCallbacks = {}
-        Internal._connectedFunctions = {} -- functions which run each Iris cycle, connected by the user
+        Internal._connectedFunctions = {}
         Internal._connections = {}
         Internal._initFunctions = {}
 
-        -- Error
         Internal._fullErrorTracebacks = game:GetService("RunService"):IsStudio()
+        Internal._hasShownFatalError = false
 
-        --[=[
-            @within Internal
-            @prop _cycleCoroutine thread
+        function Internal._HandleFatalError(errMessage: any)
+            if Internal._hasShownFatalError then return end
+            Internal._hasShownFatalError = true
+            Iris.Disabled = true
 
-            The thread which handles all connected functions. Each connection is within a pcall statement which prevents
-            Iris from crashing and instead stopping at the error.
-        ]=]
+            local reason = tostring(errMessage or "Unknown Rere Internal Error")
+
+            local rootGui = Internal.parentInstance
+            if not rootGui or not rootGui.Parent then
+                local ok, hui = pcall(function()
+                    return (type(gethui) == "function" and gethui()) or game:GetService("CoreGui")
+                end)
+                rootGui = (ok and hui) or (game.Players.LocalPlayer and game.Players.LocalPlayer:FindFirstChild("PlayerGui"))
+            end
+
+            local screenGui = Instance.new("ScreenGui")
+            screenGui.Name = "Rere_FatalErrorModal"
+            screenGui.ResetOnSpawn = false
+            screenGui.DisplayOrder = 999999
+            screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+            screenGui.IgnoreGuiInset = true
+
+            local modalBackdrop = Instance.new("Frame")
+            modalBackdrop.Name = "ModalBackdrop"
+            modalBackdrop.Size = UDim2.fromScale(1, 1)
+            modalBackdrop.Position = UDim2.fromScale(0, 0)
+            modalBackdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            modalBackdrop.BackgroundTransparency = 0.45
+            modalBackdrop.BorderSizePixel = 0
+            modalBackdrop.Active = true
+            modalBackdrop.Parent = screenGui
+
+            local errorWindow = Instance.new("Frame")
+            errorWindow.Name = "ErrorWindow"
+            errorWindow.AnchorPoint = Vector2.new(0.5, 0.5)
+            errorWindow.Position = UDim2.fromScale(0.5, 0.5)
+            errorWindow.Size = UDim2.fromOffset(480, 320)
+            errorWindow.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+            errorWindow.BorderSizePixel = 0
+            errorWindow.ClipsDescendants = true
+            errorWindow.Parent = modalBackdrop
+
+            local windowCorner = Instance.new("UICorner")
+            windowCorner.CornerRadius = UDim.new(0, 10)
+            windowCorner.Parent = errorWindow
+
+            local windowStroke = Instance.new("UIStroke")
+            windowStroke.Thickness = 2
+            windowStroke.Color = Color3.fromRGB(230, 45, 45)
+            windowStroke.Parent = errorWindow
+
+            local titleBar = Instance.new("Frame")
+            titleBar.Name = "TitleBar"
+            titleBar.Size = UDim2.new(1, 0, 0, 42)
+            titleBar.Position = UDim2.fromScale(0, 0)
+            titleBar.BackgroundColor3 = Color3.fromRGB(180, 25, 25)
+            titleBar.BorderSizePixel = 0
+            titleBar.Parent = errorWindow
+
+            local titleCorner = Instance.new("UICorner")
+            titleCorner.CornerRadius = UDim.new(0, 10)
+            titleCorner.Parent = titleBar
+
+            local titleText = Instance.new("TextLabel")
+            titleText.Name = "TitleText"
+            titleText.Size = UDim2.new(1, -20, 1, 0)
+            titleText.Position = UDim2.fromOffset(15, 0)
+            titleText.BackgroundTransparency = 1
+            titleText.Font = Enum.Font.GothamBold
+            titleText.Text = "⚠️ Rere Error Encountered"
+            titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+            titleText.TextSize = 16
+            titleText.TextXAlignment = Enum.TextXAlignment.Left
+            titleText.Parent = titleBar
+
+            local warnDesc = Instance.new("TextLabel")
+            warnDesc.Name = "WarnDesc"
+            warnDesc.Size = UDim2.new(1, -30, 0, 30)
+            warnDesc.Position = UDim2.fromOffset(15, 48)
+            warnDesc.BackgroundTransparency = 1
+            warnDesc.Font = Enum.Font.GothamMedium
+            warnDesc.Text = "This Rere cannot be used due to an internal error."
+            warnDesc.TextColor3 = Color3.fromRGB(255, 180, 180)
+            warnDesc.TextSize = 14
+            warnDesc.TextXAlignment = Enum.TextXAlignment.Left
+            warnDesc.Parent = errorWindow
+
+            local reasonLabel = Instance.new("TextLabel")
+            reasonLabel.Name = "ReasonLabel"
+            reasonLabel.Size = UDim2.new(1, -30, 0, 20)
+            reasonLabel.Position = UDim2.fromOffset(15, 80)
+            reasonLabel.BackgroundTransparency = 1
+            reasonLabel.Font = Enum.Font.GothamBold
+            reasonLabel.Text = "Reason:"
+            reasonLabel.TextColor3 = Color3.fromRGB(255, 95, 95)
+            reasonLabel.TextSize = 14
+            reasonLabel.TextXAlignment = Enum.TextXAlignment.Left
+            reasonLabel.Parent = errorWindow
+
+            local reasonScroll = Instance.new("ScrollingFrame")
+            reasonScroll.Name = "ReasonScroll"
+            reasonScroll.Size = UDim2.new(1, -30, 0, 130)
+            reasonScroll.Position = UDim2.fromOffset(15, 104)
+            reasonScroll.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
+            reasonScroll.BorderSizePixel = 0
+            reasonScroll.CanvasSize = UDim2.fromScale(0, 0)
+            reasonScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+            reasonScroll.ScrollBarThickness = 6
+            reasonScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 110)
+            reasonScroll.Parent = errorWindow
+
+            local reasonCorner = Instance.new("UICorner")
+            reasonCorner.CornerRadius = UDim.new(0, 6)
+            reasonCorner.Parent = reasonScroll
+
+            local reasonStroke = Instance.new("UIStroke")
+            reasonStroke.Thickness = 1
+            reasonStroke.Color = Color3.fromRGB(50, 50, 58)
+            reasonStroke.Parent = reasonScroll
+
+            local reasonText = Instance.new("TextLabel")
+            reasonText.Name = "ReasonText"
+            reasonText.Size = UDim2.new(1, -16, 0, 0)
+            reasonText.Position = UDim2.fromOffset(8, 8)
+            reasonText.AutomaticSize = Enum.AutomaticSize.Y
+            reasonText.BackgroundTransparency = 1
+            reasonText.Font = Enum.Font.Code
+            reasonText.Text = reason
+            reasonText.TextColor3 = Color3.fromRGB(240, 240, 245)
+            reasonText.TextSize = 13
+            reasonText.TextWrapped = true
+            reasonText.TextXAlignment = Enum.TextXAlignment.Left
+            reasonText.TextYAlignment = Enum.TextYAlignment.Top
+            reasonText.Parent = reasonScroll
+
+            local btnContainer = Instance.new("Frame")
+            btnContainer.Name = "BtnContainer"
+            btnContainer.Size = UDim2.new(1, -30, 0, 42)
+            btnContainer.Position = UDim2.new(0, 15, 1, -55)
+            btnContainer.BackgroundTransparency = 1
+            btnContainer.Parent = errorWindow
+
+            local copyBtn = Instance.new("TextButton")
+            copyBtn.Name = "CopyBtn"
+            copyBtn.Size = UDim2.new(0.48, 0, 1, 0)
+            copyBtn.Position = UDim2.fromScale(0, 0)
+            copyBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 60)
+            copyBtn.BorderSizePixel = 0
+            copyBtn.Font = Enum.Font.GothamBold
+            copyBtn.Text = "📋 Copy Reason"
+            copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            copyBtn.TextSize = 14
+            copyBtn.Parent = btnContainer
+
+            local copyCorner = Instance.new("UICorner")
+            copyCorner.CornerRadius = UDim.new(0, 6)
+            copyCorner.Parent = copyBtn
+
+            copyBtn.MouseButton1Click:Connect(function()
+                local copyFunc = (type(setclipboard) == "function" and setclipboard) or (type(toclipboard) == "function" and toclipboard)
+                if copyFunc then
+                    copyFunc(reason)
+                    copyBtn.Text = "✅ Copied to Clipboard!"
+                    task.delay(2, function()
+                        if copyBtn and copyBtn.Parent then
+                            copyBtn.Text = "📋 Copy Reason"
+                        end
+                    end)
+                else
+                    copyBtn.Text = "⚠️ Clipboard not supported"
+                end
+            end)
+
+            local exitBtn = Instance.new("TextButton")
+            exitBtn.Name = "ExitBtn"
+            exitBtn.Size = UDim2.new(0.48, 0, 1, 0)
+            exitBtn.Position = UDim2.new(0.52, 0, 0, 0)
+            exitBtn.BackgroundColor3 = Color3.fromRGB(190, 35, 35)
+            exitBtn.BorderSizePixel = 0
+            exitBtn.Font = Enum.Font.GothamBold
+            exitBtn.Text = "❌ Exit Rere"
+            exitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            exitBtn.TextSize = 14
+            exitBtn.Parent = btnContainer
+
+            local exitCorner = Instance.new("UICorner")
+            exitCorner.CornerRadius = UDim.new(0, 6)
+            exitCorner.Parent = exitBtn
+
+            exitBtn.MouseButton1Click:Connect(function()
+                pcall(function() screenGui:Destroy() end)
+                pcall(function() Iris.Shutdown() end)
+            end)
+
+            screenGui.Parent = rootGui
+        end
+
         Internal._cycleCoroutine = coroutine.create(function()
             while Internal._started do
                 for _, callback in Internal._connectedFunctions do
@@ -2222,73 +2395,23 @@ sources[nodes['Internal']] = function(script)
                     local status, _error: string = pcall(callback)
                     debug.profileend()
                     if not status then
-                        -- any error reserts the _stackIndex for the next frame and yields the error.
                         Internal._stackIndex = 1
                         coroutine.yield(false, _error)
                     end
                 end
-                -- after all callbacks, we yield so it only runs once a frame.
                 coroutine.yield(true)
             end
         end)
 
-        --[[
-            -----------------------
-                [SECTION] State
-            -----------------------
-        ]]
-
-        --[=[
-            @class State
-            This class wraps a value in getters and setters, its main purpose is to allow primatives to be passed as objects.
-            Constructors for this class are available in [Iris]
-
-            ```lua
-            local state = Iris.State(0) -- we initialise the state with a value of 0
-
-            -- these are equivalent. Ideally you should use `:get()` and ignore `.value`.
-            print(state:get())
-            print(state.value)
-
-            state:set(state:get() + 1) -- increments the state by getting the current value and adding 1.
-
-            state:onChange(function(newValue)
-                print(`The value of the state is now: {newValue}`)
-            end)
-            ```
-
-            :::caution Caution: Callbacks
-            Never call `:set()` on a state when inside the `:onChange()` callback of the same state. This will cause a continous callback.
-
-            Never chain states together so that each state changes the value of another state in a cyclic nature. This will cause a continous callback.
-            :::
-        ]=]
         local StateClass = {}
         StateClass.__index = StateClass
 
-        --[=[
-            @within State
-            @method get<T>
-            @return T
-
-            Returns the states current value.
-        ]=]
-        function StateClass:get<T>() -- you can also simply use .value
+        function StateClass:get<T>()
             return self.value
         end
 
-        --[=[
-            @within State
-            @method set<T>
-            @param newValue T
-            @param force boolean? -- force an update to all connections
-            @return T
-
-            Allows the caller to assign the state object a new value, and returns the new value.
-        ]=]
         function StateClass:set<T>(newValue: T, force: true?)
             if newValue == self.value and force ~= true then
-                -- no need to update on no change.
                 return self.value
             end
             self.value = newValue
@@ -2305,19 +2428,6 @@ sources[nodes['Internal']] = function(script)
             return self.value
         end
 
-        --[=[
-            @within State
-            @method onChange<T>
-            @param callback (newValue: T) -> ()
-            @return () -> ()
-
-            Allows the caller to connect a callback which is called when the states value is changed.
-
-            :::caution Caution: Single
-            Calling `:onChange()` every frame will add a new function every frame.
-            You must ensure you are only calling `:onChange()` once for each callback for the state's entire lifetime.
-            :::
-        ]=]
         function StateClass:onChange<T>(callback: (newValue: T) -> ())
             local connectionIndex: number = #self.ConnectedFunctions + 1
             self.ConnectedFunctions[connectionIndex] = callback
@@ -2326,35 +2436,15 @@ sources[nodes['Internal']] = function(script)
             end
         end
 
-        --[=[
-            @within State
-            @method changed<T>
-            @return boolean
-
-            Returns true if the state was changed on this frame.
-        ]=]
         function StateClass:changed<T>()
             return self.lastChangeTick + 1 == Internal._cycleTick
         end
 
         Internal.StateClass = StateClass
 
-        --[[
-            ---------------------------
-                [SECTION] Functions
-            ---------------------------
-        ]]
-
-        --[=[
-            @within Internal
-            @function _cycle
-
-            Called every frame to handle all of the widget management. Any previous frame data is ammended and everything updates.
-        ]=]
         function Internal._cycle(deltaTime: number)
-            -- debug.profilebegin("Iris/Cycle")
             if Iris.Disabled then
-                return -- Stops all rendering, effectively freezes the current frame with no interaction.
+                return
             end
 
             Internal._rootWidget.lastCycleTick = Internal._cycleTick
@@ -2364,30 +2454,21 @@ sources[nodes['Internal']] = function(script)
 
             for _, widget in Internal._lastVDOM do
                 if widget.lastCycleTick ~= Internal._cycleTick and (widget.lastCycleTick ~= -1) then
-                    -- a widget which used to be rendered was not called last frame, so we discard it.
-                    -- if the cycle tick is -1 we have already discarded it.
                     Internal._DiscardWidget(widget)
                 end
             end
 
-            -- represents all widgets created last frame. We keep the _lastVDOM to reuse widgets from the previous frame
-            -- rather than creating a new instance every frame.
             setmetatable(Internal._lastVDOM, { __mode = "kv" })
             Internal._lastVDOM = Internal._VDOM
             Internal._VDOM = Internal._generateEmptyVDOM()
 
-            -- anything that wnats to run before the frame.
             task.spawn(function()
-                -- debug.profilebegin("Iris/PostCycleCallbacks")
                 for _, callback in Internal._postCycleCallbacks do
                     callback()
                 end
-                -- debug.profileend()
             end)
 
             if Internal._globalRefreshRequested then
-                -- rerender every widget
-                --debug.profilebegin("Iris Refresh")
                 Internal._generateSelectionImageObject()
                 Internal._globalRefreshRequested = false
                 for _, widget in Internal._lastVDOM do
@@ -2395,98 +2476,55 @@ sources[nodes['Internal']] = function(script)
                 end
                 Internal._generateRootInstance()
                 Internal._lastVDOM = Internal._generateEmptyVDOM()
-                --debug.profileend()
             end
 
-            -- update counters
             Internal._cycleTick += 1
             Internal._deltaTime = deltaTime
             table.clear(Internal._usedIDs)
 
-            -- if Internal.parentInstance:IsA("GuiBase2d") and math.min(Internal.parentInstance.AbsoluteSize.X, Internal.parentInstance.AbsoluteSize.Y) < 100 then
-            --     error("Iris Parent Instance is too small")
-            -- end
             local compatibleParent = (Internal.parentInstance:IsA("GuiBase2d") or Internal.parentInstance:IsA("BasePlayerGui"))
             if compatibleParent == false then
-                error("The Iris parent instance will not display any GUIs.")
+                Internal._HandleFatalError("The Iris parent instance will not display any GUIs.")
+                return
             end
 
-            -- if we are running in Studio, we want full error tracebacks, so we don't have
-            -- any pcall to protect from an error.
-            if Internal._fullErrorTracebacks then
-                -- debug.profilebegin("Iris/Cycle/Callback")
-                for _, callback in Internal._connectedFunctions do
-                    callback()
+            local coroutineStatus = coroutine.status(Internal._cycleCoroutine)
+            if coroutineStatus == "suspended" then
+                local _, success, result = coroutine.resume(Internal._cycleCoroutine)
+                if success == false then
+                    Internal._HandleFatalError(result)
+                    return
                 end
+            elseif coroutineStatus == "running" then
+                Internal._HandleFatalError("Iris cycleCoroutine took too long to yield. Connected functions should not yield.")
+                return
             else
-                -- debug.profilebegin("Iris/Cycle/Coroutine")
-
-                -- each frame we check on our thread status.
-                local coroutineStatus = coroutine.status(Internal._cycleCoroutine)
-                if coroutineStatus == "suspended" then
-                    -- suspended means it yielded, either because it was a complete success
-                    -- or it caught an error in the code. We run it again for this frame.
-                    local _, success, result = coroutine.resume(Internal._cycleCoroutine)
-                    if success == false then
-                        -- Connected function code errored
-                        error(result, 0)
-                    end
-                elseif coroutineStatus == "running" then
-                    -- still running (probably because of an asynchronous method inside a connection).
-                    error("Iris cycleCoroutine took to long to yield. Connected functions should not yield.")
-                else
-                    -- should never reach this (nothing you can do).
-                    error("unrecoverable state")
-                end
-                -- debug.profileend()
+                Internal._HandleFatalError("Unrecoverable Rere state (coroutine status: " .. tostring(coroutineStatus) .. ")")
+                return
             end
 
             if Internal._stackIndex ~= 1 then
-                -- has to be larger than 1 because of the check that it isnt below 1 in Iris.End
                 Internal._stackIndex = 1
-                error("Too few calls to Iris.End().", 0)
+                Internal._HandleFatalError("Too few calls to Iris.End().")
+                return
             end
 
-            -- Errors if the end user forgot to pop all their ids as they would leak over into the next frame
-            -- could also just clear, but that might be confusing behaviour.
             if #Internal._pushedIds ~= 0 then
-                error("Too few calls to Iris.PopId().", 0)
+                table.clear(Internal._pushedIds)
+                Internal._HandleFatalError("Too few calls to Iris.PopId().")
+                return
             end
-
-            -- debug.profileend()
         end
 
-        --[=[
-            @within Internal
-            @ignore
-            @function _NoOp
-
-            A dummy function which does nothing. Used as a placeholder for optional methods in a widget class.
-            Used in `Internal.WidgetConstructor`
-        ]=]
         function Internal._NoOp() end
 
-        --  Widget
-
-        --[=[
-            @within Internal
-            @function WidgetConstructor
-            @param type string -- name used to denote the widget class.
-            @param widgetClass Types.WidgetClass -- table of methods for the new widget.
-
-            For each widget, a widget class is created which handles all the operations of a widget. This removes the class nature
-            of widgets, and simplifies the available functions which can be applied to any widget. The widgets themselves are
-            dumb tables containing all the data but no methods to handle any of the data apart from events.
-        ]=]
         function Internal.WidgetConstructor(type: string, widgetClass: Types.WidgetClass)
             local Fields = {
                 All = {
                     Required = {
-                        "Generate", -- generates the instance.
+                        "Generate",
                         "Discard",
                         "Update",
-
-                        -- not methods !
                         "Args",
                         "Events",
                         "hasChildren",
@@ -2503,7 +2541,7 @@ sources[nodes['Internal']] = function(script)
                 },
                 IfChildren = {
                     Required = {
-                        "ChildAdded", -- returns the parent of the child widget.
+                        "ChildAdded",
                     },
                     Optional = {
                         "ChildDiscarded",
@@ -2511,8 +2549,6 @@ sources[nodes['Internal']] = function(script)
                 },
             }
 
-            -- we ensure all essential functions and properties are present, otherwise the code will break later.
-            -- some functions will only be needed if the widget has children or has state.
             local thisWidget = {} :: Types.WidgetClass
             for _, field in Fields.All.Required do
                 assert(widgetClass[field] ~= nil, `field {field} is missing from widget {type}, it is required for all widgets`)
@@ -2521,7 +2557,6 @@ sources[nodes['Internal']] = function(script)
 
             for _, field in Fields.All.Optional do
                 if widgetClass[field] == nil then
-                    -- assign a dummy function which does nothing.
                     thisWidget[field] = Internal._NoOp
                 else
                     thisWidget[field] = widgetClass[field]
@@ -2556,9 +2591,7 @@ sources[nodes['Internal']] = function(script)
                 end
             end
 
-            -- an internal table of all widgets to the widget class.
             Internal._widgets[type] = thisWidget
-            -- allowing access to the index for each widget argument.
             Iris.Args[type] = thisWidget.Args
 
             local ArgNames = {}
@@ -2576,26 +2609,12 @@ sources[nodes['Internal']] = function(script)
             end
         end
 
-        --[=[
-            @within Internal
-            @function _Insert
-            @param widgetType: string -- name of widget class.
-            @param arguments { [string]: number } -- arguments of the widget.
-            @param states { [string]: States<any> }? -- states of the widget.
-            @return Widget -- the widget.
-
-            Every widget is created through _Insert. An ID is generated based on the line of the calling code and is used to
-            find the previous frame widget if it exists. If no widget exists, a new one is created.
-        ]=]
         function Internal._Insert(widgetType: string, args: Types.WidgetArguments?, states: Types.WidgetStates?)
             local ID = Internal._getID(3)
-            --debug.profilebegin(ID)
 
-            -- fetch the widget class which contains all the functions for the widget.
             local thisWidgetClass = Internal._widgets[widgetType]
 
             if Internal._VDOM[ID] then
-                -- widget already created once this frame, so we can append to it.
                 return Internal._ContinueWidget(ID, widgetType)
             end
 
@@ -2605,19 +2624,16 @@ sources[nodes['Internal']] = function(script)
                     args = { args }
                 end
 
-                -- convert the arguments to a key-value dictionary so arguments can be referred to by their name and not index.
                 for index, argument in args do
                     assert(index > 0, `Widget Arguments must be a positive number, not {index} of type {typeof(index)} for {argument}.`)
                     arguments[thisWidgetClass.ArgNames[index]] = argument
                 end
             end
-            -- prevents tampering with the arguments which are used to check for changes.
             table.freeze(arguments)
 
             local lastWidget = Internal._lastVDOM[ID]
             if lastWidget then
                 if Internal._refreshCounter > 0 or widgetType ~= lastWidget.type then
-                    -- every widget is being redrawn, or this widget type has changed
                     Internal._DiscardWidget(lastWidget)
                     lastWidget = nil
                 end
@@ -2640,16 +2656,12 @@ sources[nodes['Internal']] = function(script)
                 end
             end
 
-            -- since rows are not instances, but will be removed if not updated, we have to add specific table code.
             if parentWidget.type == "Table" then
                 local Table = parentWidget :: Types.Table
                 Table._rowCycles[Table._rowIndex] = Internal._cycleTick
             end
 
             if Internal._deepCompare(thisWidget.providedArguments, arguments) == false then
-                -- the widgets arguments have changed, the widget should update to reflect changes.
-                -- providedArguments is the frozen table which will not change.
-                -- the arguments can be altered internally, which happens for the input widgets.
                 thisWidget.arguments = Internal._deepCopy(arguments)
                 thisWidget.providedArguments = arguments
                 thisWidgetClass.Update(thisWidget)
@@ -2660,7 +2672,6 @@ sources[nodes['Internal']] = function(script)
 
             if thisWidgetClass.hasChildren then
                 local thisParent = thisWidget :: Types.ParentWidget
-                -- a parent widget, so we increase our depth.
                 thisParent.ZOffset = 0
                 thisParent.ZUpdate = false
                 Internal._stackIndex += 1
@@ -2670,29 +2681,14 @@ sources[nodes['Internal']] = function(script)
             Internal._VDOM[ID] = thisWidget
             Internal._lastWidget = thisWidget
 
-            --debug.profileend()
-
             return thisWidget
         end
 
-        --[=[
-            @within Internal
-            @function _GenNewWidget
-            @param widgetType string
-            @param arguments { [string]: any } -- arguments of the widget.
-            @param states { [string]: State<any> }? -- states of the widget.
-            @param ID ID -- id of the new widget. Determined in `Internal._Insert`
-            @return Widget -- the newly created widget.
-
-            All widgets are created as tables with properties. The widget class contains the functions to create the UI instances and
-            update the widget or change state.
-        ]=]
         function Internal._GenNewWidget(widgetType: string, arguments: Types.Arguments, states: Types.WidgetStates?, ID: Types.ID)
             local parentId = Internal._IDStack[Internal._stackIndex]
             local parentWidget: Types.ParentWidget = Internal._VDOM[parentId]
             local thisWidgetClass = Internal._widgets[widgetType]
 
-            -- widgets are just tables with properties.
             local thisWidget = {} :: Types.Widget
             setmetatable(thisWidget, thisWidget)
 
@@ -2700,13 +2696,10 @@ sources[nodes['Internal']] = function(script)
             thisWidget.type = widgetType
             thisWidget.parentWidget = parentWidget
             thisWidget.trackedEvents = {}
-            -- thisWidget.UID = HttpService:GenerateGUID(false):sub(0, 8)
 
-            -- widgets have lots of space to ensure they are always visible.
             thisWidget.ZIndex = parentWidget.ZOffset
 
             thisWidget.Instance = thisWidgetClass.Generate(thisWidget)
-            -- tooltips set their parent in the generation method, so we need to udpate it here
             parentWidget = thisWidget.parentWidget
 
             if Internal._config.Parent then
@@ -2715,7 +2708,6 @@ sources[nodes['Internal']] = function(script)
                 thisWidget.Instance.Parent = Internal._widgets[parentWidget.type].ChildAdded(parentWidget, thisWidget)
             end
 
-            -- we can modify the arguments table, but keep a frozen copy to compare for user-end changes.
             thisWidget.providedArguments = arguments
             thisWidget.arguments = Internal._deepCopy(arguments)
             thisWidgetClass.Update(thisWidget)
@@ -2726,7 +2718,6 @@ sources[nodes['Internal']] = function(script)
                 if states then
                     for index, state in states do
                         if not (type(state) == "table" and getmetatable(state :: any) == Internal.StateClass) then
-                            -- generate a new state.
                             states[index] = Internal._widgetState(stateWidget, index, state)
                         end
                         states[index].lastChangeTick = Internal._cycleTick
@@ -2743,7 +2734,6 @@ sources[nodes['Internal']] = function(script)
                 thisWidgetClass.GenerateState(stateWidget)
                 thisWidgetClass.UpdateState(stateWidget)
 
-                -- the state MT can't be itself because state has to explicitly only contain stateClass objects
                 stateWidget.stateMT = {}
                 setmetatable(stateWidget.state, stateWidget.stateMT)
 
@@ -2761,23 +2751,11 @@ sources[nodes['Internal']] = function(script)
             return thisWidget
         end
 
-        --[=[
-            @within Internal
-            @function _ContinueWidget
-            @param ID ID -- id of the widget.
-            @param widgetType string
-            @return Widget -- the widget.
-
-            Since the widget has already been created this frame, we can just add it back to the stack. There is no checking of
-            arguments or states.
-            Basically equivalent to the end of `Internal._Insert`.
-        ]=]
         function Internal._ContinueWidget(ID: Types.ID, widgetType: string)
             local thisWidgetClass = Internal._widgets[widgetType]
             local thisWidget = Internal._VDOM[ID]
 
             if thisWidgetClass.hasChildren then
-                -- a parent widget so we increase our depth.
                 Internal._stackIndex += 1
                 Internal._IDStack[Internal._stackIndex] = thisWidget.ID
             end
@@ -2786,40 +2764,16 @@ sources[nodes['Internal']] = function(script)
             return thisWidget
         end
 
-        --[=[
-            @within Internal
-            @function _DiscardWidget
-            @param widgetToDiscard Widget
-
-            Destroys the widget instance and updates any parent. This happens if the widget was not called in the
-            previous frame. There is no code which needs to update any widget tables since they are already reset
-            at the start before discarding happens.
-        ]=]
         function Internal._DiscardWidget(widgetToDiscard: Types.Widget)
             local widgetParent = widgetToDiscard.parentWidget
             if widgetParent then
-                -- if the parent needs to update it's children.
                 Internal._widgets[widgetParent.type].ChildDiscarded(widgetParent, widgetToDiscard)
             end
 
-            -- using the widget class discard function.
             Internal._widgets[widgetToDiscard.type].Discard(widgetToDiscard)
-
-            -- mark as discarded
             widgetToDiscard.lastCycleTick = -1
         end
 
-        --[=[
-            @within Internal
-            @function _widgetState
-            @param thisWidget Widget -- widget the state belongs to.
-            @param stateName string
-            @param initialValue any
-            @return State<any> -- the state for the widget.
-
-            Connects the state to the widget. If no state exists then a new one is created. Called for every state in every
-            widget if the user does not provide a state.
-        ]=]
         function Internal._widgetState<T>(thisWidget: Types.StateWidget, stateName: string, initialValue: T)
             local ID = thisWidget.ID .. stateName
             if Internal._states[ID] then
@@ -2840,16 +2794,6 @@ sources[nodes['Internal']] = function(script)
             end
         end
 
-        --[=[
-            @within Internal
-            @function _EventCall
-            @param thisWidget Widget
-            @param evetName string
-            @return boolean -- the value of the event.
-
-            A wrapper for any event on any widget. Automatically, Iris does not initialize events unless they are explicitly
-            called so in the first frame, the event connections are set up. Every event is a function which returns a boolean.
-        ]=]
         function Internal._EventCall(thisWidget: Types.Widget, eventName: string)
             local Events = Internal._widgets[thisWidget.type].Events
             local Event = Events[eventName]
@@ -2862,54 +2806,22 @@ sources[nodes['Internal']] = function(script)
             return Event.Get(thisWidget)
         end
 
-        --[=[
-            @within Internal
-            @function _GetParentWidget
-            @return Widget -- the parent widget
-
-            Returns the parent widget of the currently active widget, based on the stack depth.
-        ]=]
         function Internal._GetParentWidget(): Types.ParentWidget
             return Internal._VDOM[Internal._IDStack[Internal._stackIndex]]
         end
 
-        -- Generate
-
-        --[=[
-            @ignore
-            @within Internal
-            @function _generateEmptyVDOM
-            @return { [ID]: Widget }
-
-            Creates the VDOM at the start of each frame containing just the root instance.
-        ]=]
         function Internal._generateEmptyVDOM()
             return {
                 ["R"] = Internal._rootWidget,
             }
         end
 
-        --[=[
-            @ignore
-            @within Internal
-            @function _generateRootInstance
-
-            Creates the root instance.
-        ]=]
         function Internal._generateRootInstance()
-            -- unsafe to call before Internal.connect
             Internal._rootInstance = Internal._widgets["Root"].Generate(Internal._widgets["Root"])
             Internal._rootInstance.Parent = Internal.parentInstance
             Internal._rootWidget.Instance = Internal._rootInstance
         end
 
-        --[=[
-            @ignore
-            @within Internal
-            @function _generateSelctionImageObject
-
-            Creates the selection object for buttons.
-        ]=]
         function Internal._generateSelectionImageObject()
             if Internal.SelectionImageObject then
                 Internal.SelectionImageObject:Destroy()
@@ -2928,18 +2840,6 @@ sources[nodes['Internal']] = function(script)
             Internal.SelectionImageObject = SelectionImageObject
         end
 
-        -- Utility
-
-        --[=[
-            @within Internal
-            @function _getID
-            @param levelsToIgnore number -- used to skip over internal calls to `_getID`.
-            @return ID
-
-            Generates a unique ID for each widget which is based on the line that the widget is
-            created from. This ensures that the function is heuristic and always returns the same
-            id for the same widget.
-        ]=]
         function Internal._getID(levelsToIgnore: number)
             if Internal._nextWidgetId then
                 local ID = Internal._nextWidgetId
@@ -2975,20 +2875,7 @@ sources[nodes['Internal']] = function(script)
             end
         end
 
-        --[=[
-            @ignore
-            @within Internal
-            @function _deepCompare
-            @param t1 {}
-            @param t2 {}
-            @return boolean
-
-            Compares two tables to check if they are the same. It uses a recursive iteration through one table
-            to compare against the other. Used to determine if the arguments of a widget have changed since last
-            frame.
-        ]=]
         function Internal._deepCompare(t1: {}, t2: {})
-            -- unoptimized ?
             for i, v1 in t1 do
                 local v2 = t2[i]
                 if type(v1) == "table" then
@@ -3009,15 +2896,6 @@ sources[nodes['Internal']] = function(script)
             return true
         end
 
-        --[=[
-            @ignore
-            @within Internal
-            @function _deepCopy
-            @param t {}
-            @return {}
-
-            Performs a deep copy of a table so that neither table contains a shared reference.
-        ]=]
         function Internal._deepCopy(t: {}): {}
             local copy: {} = table.clone(t)
 
@@ -3030,7 +2908,6 @@ sources[nodes['Internal']] = function(script)
             return copy
         end
 
-        -- VDOM
         Internal._lastVDOM = Internal._generateEmptyVDOM()
         Internal._VDOM = Internal._generateEmptyVDOM()
 
@@ -6598,6 +6475,10 @@ sources[nodes['Iris']] = function(script)
     Iris.Version = "0.1.25"
     function Iris:GetVersion(): string
         return self.Version
+    end
+
+    function Iris.ShowFatalError(errMessage: any)
+        Internal._HandleFatalError(errMessage)
     end
     local function isGuiParent(container: unknown): boolean
         if typeof(container) ~= "Instance" then
