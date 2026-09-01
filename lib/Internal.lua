@@ -3,7 +3,7 @@ local Types = require(script.Parent.Types)
 return function(Iris: Types.Iris): Types.Internal
     local Internal = {} :: Types.Internal
 
-    Internal._version = [[ 2.5.2 ]]
+    Internal._version = [[ 2.5.3 ]]
 
     Internal._started = false
     Internal._shutdown = false
@@ -44,203 +44,87 @@ return function(Iris: Types.Iris): Types.Internal
     Internal._initFunctions = {}
 
     Internal._fullErrorTracebacks = game:GetService("RunService"):IsStudio()
-    Internal._hasShownFatalError = false
+    
+    Internal._errored = false
+    Internal._errorReason = ""
+    Internal._copyStatusText = "📋 Copy Reason"
+    Internal._errorPosState = nil
+    Internal._errorSizeState = nil
 
     function Internal._HandleFatalError(errMessage: any)
-        if Internal._hasShownFatalError then return end
-        Internal._hasShownFatalError = true
-        Iris.Disabled = true
+        if Internal._errored then return end
+        Internal._errored = true
+        Internal._errorReason = tostring(errMessage or "Unknown Rere Internal Error")
+        Internal._globalRefreshRequested = true
+    end
 
-        local reason = tostring(errMessage or "Unknown Rere Internal Error")
-
-        local rootGui = Internal.parentInstance
-        if not rootGui or not rootGui.Parent then
-            local ok, hui = pcall(function()
-                return (type(gethui) == "function" and gethui()) or game:GetService("CoreGui")
-            end)
-            rootGui = (ok and hui) or (game.Players.LocalPlayer and game.Players.LocalPlayer:FindFirstChild("PlayerGui"))
+    function Internal._RenderErrorWindow()
+        local screenWidth = 800
+        local screenHeight = 600
+        if Internal.parentInstance and Internal.parentInstance:IsA("GuiBase2d") then
+            local absSize = Internal.parentInstance.AbsoluteSize
+            if absSize.X > 100 and absSize.Y > 100 then
+                screenWidth = absSize.X
+                screenHeight = absSize.Y
+            end
+        else
+            local camera = workspace.CurrentCamera
+            if camera and camera.ViewportSize.X > 100 then
+                screenWidth = camera.ViewportSize.X
+                screenHeight = camera.ViewportSize.Y
+            end
         end
 
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "Rere_FatalErrorModal"
-        screenGui.ResetOnSpawn = false
-        screenGui.DisplayOrder = 999999
-        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        screenGui.IgnoreGuiInset = true
+        if not Internal._errorPosState then
+            local winW, winH = 460, 240
+            local posX = math.max(20, math.floor((screenWidth - winW) / 2))
+            local posY = math.max(20, math.floor((screenHeight - winH) / 2))
+            Internal._errorPosState = {
+                ID = "RereFatalErrorPos",
+                value = Vector2.new(posX, posY),
+                lastChangeTick = Internal._cycleTick,
+                ConnectedWidgets = {},
+                ConnectedFunctions = {},
+            }
+            setmetatable(Internal._errorPosState, Internal.StateClass)
+        end
 
-        local modalBackdrop = Instance.new("Frame")
-        modalBackdrop.Name = "ModalBackdrop"
-        modalBackdrop.Size = UDim2.fromScale(1, 1)
-        modalBackdrop.Position = UDim2.fromScale(0, 0)
-        modalBackdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        modalBackdrop.BackgroundTransparency = 0.45
-        modalBackdrop.BorderSizePixel = 0
-        modalBackdrop.Active = true
-        modalBackdrop.Parent = screenGui
+        if not Internal._errorSizeState then
+            Internal._errorSizeState = {
+                ID = "RereFatalErrorSize",
+                value = Vector2.new(460, 240),
+                lastChangeTick = Internal._cycleTick,
+                ConnectedWidgets = {},
+                ConnectedFunctions = {},
+            }
+            setmetatable(Internal._errorSizeState, Internal.StateClass)
+        end
 
-        local errorWindow = Instance.new("Frame")
-        errorWindow.Name = "ErrorWindow"
-        errorWindow.AnchorPoint = Vector2.new(0.5, 0.5)
-        errorWindow.Position = UDim2.fromScale(0.5, 0.5)
-        errorWindow.Size = UDim2.fromOffset(480, 320)
-        errorWindow.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
-        errorWindow.BorderSizePixel = 0
-        errorWindow.ClipsDescendants = true
-        errorWindow.Parent = modalBackdrop
-
-        local windowCorner = Instance.new("UICorner")
-        windowCorner.CornerRadius = UDim.new(0, 10)
-        windowCorner.Parent = errorWindow
-
-        local windowStroke = Instance.new("UIStroke")
-        windowStroke.Thickness = 2
-        windowStroke.Color = Color3.fromRGB(230, 45, 45)
-        windowStroke.Parent = errorWindow
-
-        local titleBar = Instance.new("Frame")
-        titleBar.Name = "TitleBar"
-        titleBar.Size = UDim2.new(1, 0, 0, 42)
-        titleBar.Position = UDim2.fromScale(0, 0)
-        titleBar.BackgroundColor3 = Color3.fromRGB(180, 25, 25)
-        titleBar.BorderSizePixel = 0
-        titleBar.Parent = errorWindow
-
-        local titleCorner = Instance.new("UICorner")
-        titleCorner.CornerRadius = UDim.new(0, 10)
-        titleCorner.Parent = titleBar
-
-        local titleText = Instance.new("TextLabel")
-        titleText.Name = "TitleText"
-        titleText.Size = UDim2.new(1, -20, 1, 0)
-        titleText.Position = UDim2.fromOffset(15, 0)
-        titleText.BackgroundTransparency = 1
-        titleText.Font = Enum.Font.GothamBold
-        titleText.Text = "⚠️ Rere Error Encountered"
-        titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-        titleText.TextSize = 16
-        titleText.TextXAlignment = Enum.TextXAlignment.Left
-        titleText.Parent = titleBar
-
-        local warnDesc = Instance.new("TextLabel")
-        warnDesc.Name = "WarnDesc"
-        warnDesc.Size = UDim2.new(1, -30, 0, 30)
-        warnDesc.Position = UDim2.fromOffset(15, 48)
-        warnDesc.BackgroundTransparency = 1
-        warnDesc.Font = Enum.Font.GothamMedium
-        warnDesc.Text = "This Rere cannot be used due to an internal error."
-        warnDesc.TextColor3 = Color3.fromRGB(255, 180, 180)
-        warnDesc.TextSize = 14
-        warnDesc.TextXAlignment = Enum.TextXAlignment.Left
-        warnDesc.Parent = errorWindow
-
-        local reasonLabel = Instance.new("TextLabel")
-        reasonLabel.Name = "ReasonLabel"
-        reasonLabel.Size = UDim2.new(1, -30, 0, 20)
-        reasonLabel.Position = UDim2.fromOffset(15, 80)
-        reasonLabel.BackgroundTransparency = 1
-        reasonLabel.Font = Enum.Font.GothamBold
-        reasonLabel.Text = "Reason:"
-        reasonLabel.TextColor3 = Color3.fromRGB(255, 95, 95)
-        reasonLabel.TextSize = 14
-        reasonLabel.TextXAlignment = Enum.TextXAlignment.Left
-        reasonLabel.Parent = errorWindow
-
-        local reasonScroll = Instance.new("ScrollingFrame")
-        reasonScroll.Name = "ReasonScroll"
-        reasonScroll.Size = UDim2.new(1, -30, 0, 130)
-        reasonScroll.Position = UDim2.fromOffset(15, 104)
-        reasonScroll.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
-        reasonScroll.BorderSizePixel = 0
-        reasonScroll.CanvasSize = UDim2.fromScale(0, 0)
-        reasonScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        reasonScroll.ScrollBarThickness = 6
-        reasonScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 110)
-        reasonScroll.Parent = errorWindow
-
-        local reasonCorner = Instance.new("UICorner")
-        reasonCorner.CornerRadius = UDim.new(0, 6)
-        reasonCorner.Parent = reasonScroll
-
-        local reasonStroke = Instance.new("UIStroke")
-        reasonStroke.Thickness = 1
-        reasonStroke.Color = Color3.fromRGB(50, 50, 58)
-        reasonStroke.Parent = reasonScroll
-
-        local reasonText = Instance.new("TextLabel")
-        reasonText.Name = "ReasonText"
-        reasonText.Size = UDim2.new(1, -16, 0, 0)
-        reasonText.Position = UDim2.fromOffset(8, 8)
-        reasonText.AutomaticSize = Enum.AutomaticSize.Y
-        reasonText.BackgroundTransparency = 1
-        reasonText.Font = Enum.Font.Code
-        reasonText.Text = reason
-        reasonText.TextColor3 = Color3.fromRGB(240, 240, 245)
-        reasonText.TextSize = 13
-        reasonText.TextWrapped = true
-        reasonText.TextXAlignment = Enum.TextXAlignment.Left
-        reasonText.TextYAlignment = Enum.TextYAlignment.Top
-        reasonText.Parent = reasonScroll
-
-        local btnContainer = Instance.new("Frame")
-        btnContainer.Name = "BtnContainer"
-        btnContainer.Size = UDim2.new(1, -30, 0, 42)
-        btnContainer.Position = UDim2.new(0, 15, 1, -55)
-        btnContainer.BackgroundTransparency = 1
-        btnContainer.Parent = errorWindow
-
-        local copyBtn = Instance.new("TextButton")
-        copyBtn.Name = "CopyBtn"
-        copyBtn.Size = UDim2.new(0.48, 0, 1, 0)
-        copyBtn.Position = UDim2.fromScale(0, 0)
-        copyBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 60)
-        copyBtn.BorderSizePixel = 0
-        copyBtn.Font = Enum.Font.GothamBold
-        copyBtn.Text = "📋 Copy Reason"
-        copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        copyBtn.TextSize = 14
-        copyBtn.Parent = btnContainer
-
-        local copyCorner = Instance.new("UICorner")
-        copyCorner.CornerRadius = UDim.new(0, 6)
-        copyCorner.Parent = copyBtn
-
-        copyBtn.MouseButton1Click:Connect(function()
-            local copyFunc = (type(setclipboard) == "function" and setclipboard) or (type(toclipboard) == "function" and toclipboard)
-            if copyFunc then
-                copyFunc(reason)
-                copyBtn.Text = "✅ Copied to Clipboard!"
-                task.delay(2, function()
-                    if copyBtn and copyBtn.Parent then
-                        copyBtn.Text = "📋 Copy Reason"
+        Iris.Window({"⚠️ Rere Error Encountered", [Iris.Args.Window.NoClose] = true, [Iris.Args.Window.NoCollapse] = true}, {
+            position = Internal._errorPosState,
+            size = Internal._errorSizeState,
+        })
+            Iris.Text({"⚠️ This Rere cannot be used due to an internal error."})
+            Iris.Separator()
+            Iris.Text({"Reason:"})
+            Iris.Text({tostring(Internal._errorReason or "Unknown error")})
+            Iris.Separator()
+            Iris.SameLine()
+                if Iris.Button({Internal._copyStatusText or "📋 Copy Reason"}).clicked() then
+                    local copyFunc = (type(setclipboard) == "function" and setclipboard) or (type(toclipboard) == "function" and toclipboard)
+                    if copyFunc then
+                        copyFunc(tostring(Internal._errorReason))
+                        Internal._copyStatusText = "✅ Copied Reason!"
+                        task.delay(2, function()
+                            Internal._copyStatusText = "📋 Copy Reason"
+                        end)
                     end
-                end)
-            else
-                copyBtn.Text = "⚠️ Clipboard not supported"
-            end
-        end)
-
-        local exitBtn = Instance.new("TextButton")
-        exitBtn.Name = "ExitBtn"
-        exitBtn.Size = UDim2.new(0.48, 0, 1, 0)
-        exitBtn.Position = UDim2.new(0.52, 0, 0, 0)
-        exitBtn.BackgroundColor3 = Color3.fromRGB(190, 35, 35)
-        exitBtn.BorderSizePixel = 0
-        exitBtn.Font = Enum.Font.GothamBold
-        exitBtn.Text = "❌ Exit Rere"
-        exitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        exitBtn.TextSize = 14
-        exitBtn.Parent = btnContainer
-
-        local exitCorner = Instance.new("UICorner")
-        exitCorner.CornerRadius = UDim.new(0, 6)
-        exitCorner.Parent = exitBtn
-
-        exitBtn.MouseButton1Click:Connect(function()
-            pcall(function() screenGui:Destroy() end)
-            pcall(function() Iris.Shutdown() end)
-        end)
-
-        screenGui.Parent = rootGui
+                end
+                if Iris.Button({"❌ Exit Rere"}).clicked() then
+                    Iris.Shutdown()
+                end
+            Iris.End()
+        Iris.End()
     end
 
     Internal._cycleCoroutine = coroutine.create(function()
@@ -340,6 +224,11 @@ return function(Iris: Types.Iris): Types.Internal
         local compatibleParent = (Internal.parentInstance:IsA("GuiBase2d") or Internal.parentInstance:IsA("BasePlayerGui"))
         if compatibleParent == false then
             Internal._HandleFatalError("The Iris parent instance will not display any GUIs.")
+            return
+        end
+
+        if Internal._errored then
+            Internal._RenderErrorWindow()
             return
         end
 
@@ -630,9 +519,11 @@ return function(Iris: Types.Iris): Types.Internal
     end
 
     function Internal._widgetState<T>(thisWidget: Types.StateWidget, stateName: string, initialValue: T)
-        local ID = thisWidget.ID .. stateName
+        local ID = thisWidget and (thisWidget.ID .. stateName) or stateName
         if Internal._states[ID] then
-            Internal._states[ID].ConnectedWidgets[thisWidget.ID] = thisWidget
+            if thisWidget then
+                Internal._states[ID].ConnectedWidgets[thisWidget.ID] = thisWidget
+            end
             Internal._states[ID].lastChangeTick = Internal._cycleTick
             return Internal._states[ID]
         else
@@ -640,7 +531,7 @@ return function(Iris: Types.Iris): Types.Internal
                 ID = ID,
                 value = initialValue,
                 lastChangeTick = Internal._cycleTick,
-                ConnectedWidgets = { [thisWidget.ID] = thisWidget },
+                ConnectedWidgets = thisWidget and { [thisWidget.ID] = thisWidget } or {},
                 ConnectedFunctions = {},
             } :: Types.State<T>
             setmetatable(newState, Internal.StateClass)
