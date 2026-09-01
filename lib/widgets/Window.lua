@@ -130,6 +130,35 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         return math.clamp(limitingAxis / MOBILE_REFERENCE_AXIS, MOBILE_MIN_SCALE, MOBILE_MAX_SCALE)
     end
 
+    local resizeStartCursor = Vector2.zero
+    local resizeStartWindowSize = Vector2.zero
+    local resizeStartWindowPos = Vector2.zero
+    local resizeWindowScale = 1.2
+
+    local function beginResize(thisWidget: Types.Window, topBottom: any, leftRight: any, input: InputObject)
+        if not anyFocusedWindow or not (focusedWindow == thisWidget) then
+            Iris.SetFocusedWindow(thisWidget)
+        end
+        isResizing = true
+        resizeFromTopBottom = topBottom
+        resizeFromLeftRight = leftRight
+        resizeWindow = thisWidget
+        activeWindowInput = input
+
+        local Window = thisWidget.Instance :: Frame
+        local WindowButton: TextButton? = Window and Window:FindFirstChild("WindowButton") :: any
+        if WindowButton then
+            resizeStartWindowSize = Vector2.new(WindowButton.Size.X.Offset, WindowButton.Size.Y.Offset)
+            resizeStartWindowPos = Vector2.new(WindowButton.Position.X.Offset, WindowButton.Position.Y.Offset)
+        else
+            resizeStartWindowSize = Vector2.new(thisWidget.state.size.value.X, thisWidget.state.size.value.Y)
+            resizeStartWindowPos = Vector2.new(thisWidget.state.position.value.X, thisWidget.state.position.value.Y)
+        end
+        resizeStartCursor = inputPosition(input)
+        resizeWindowScale = getInterfaceScale(thisWidget)
+        lastCursorPosition = resizeStartCursor
+    end
+
     local function quickSwapWindows()
         -- ctrl + tab swapping functionality
         if Iris._config.UseScreenGUIs == false then
@@ -162,13 +191,15 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
     end
 
     local function fitSizeToWindowBounds(thisWidget: Types.Window, intentedSize: Vector2)
-        local windowSize = Vector2.new(thisWidget.state.position.value.X, thisWidget.state.position.value.Y)
-        local minWindowSize = (Iris._config.TextSize + 2 * Iris._config.FramePadding.Y) * 2
+        local minWindowSize = Vector2.new(120, 60)
         local usableSize = widgets.getScreenSizeForWindow(thisWidget)
         local safeAreaPadding = Vector2.new(Iris._config.WindowBorderSize + Iris._config.DisplaySafeAreaPadding.X, Iris._config.WindowBorderSize + Iris._config.DisplaySafeAreaPadding.Y)
 
-        local maxWindowSize = (usableSize - windowSize - safeAreaPadding) / getInterfaceScale(thisWidget)
-        return Vector2.new(math.clamp(intentedSize.X, minWindowSize, math.max(maxWindowSize.X, minWindowSize)), math.clamp(intentedSize.Y, minWindowSize, math.max(maxWindowSize.Y, minWindowSize)))
+        local maxWindowSize = (usableSize - safeAreaPadding) / getInterfaceScale(thisWidget)
+        return Vector2.new(
+            math.clamp(intentedSize.X, minWindowSize.X, math.max(maxWindowSize.X, minWindowSize.X)),
+            math.clamp(intentedSize.Y, minWindowSize.Y, math.max(maxWindowSize.Y, minWindowSize.Y))
+        )
     end
 
     local function fitPositionToWindowBounds(thisWidget: Types.Window, intendedPosition: Vector2)
@@ -292,20 +323,17 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
         if input.UserInputType == Enum.UserInputType.MouseButton1 and isInsideResize and not isInsideWindow and anyFocusedWindow and focusedWindow then
             local midWindow = focusedWindow.state.position.value + (focusedWindow.state.size.value / 2)
-            local cursorPosition = widgets.getMouseLocation() - midWindow
+            local cursorPosition = inputPosition(input) - midWindow
 
-            -- check which axis its closest to, then check which side is closest with math.sign
+            local tb, lr
             if math.abs(cursorPosition.X) * focusedWindow.state.size.value.Y >= math.abs(cursorPosition.Y) * focusedWindow.state.size.value.X then
-                resizeFromTopBottom = Enum.TopBottom.Center
-                resizeFromLeftRight = if math.sign(cursorPosition.X) == -1 then Enum.LeftRight.Left else Enum.LeftRight.Right
+                tb = Enum.TopBottom.Center
+                lr = if math.sign(cursorPosition.X) == -1 then Enum.LeftRight.Left else Enum.LeftRight.Right
             else
-                resizeFromLeftRight = Enum.LeftRight.Center
-                resizeFromTopBottom = if math.sign(cursorPosition.Y) == -1 then Enum.TopBottom.Top else Enum.TopBottom.Bottom
+                lr = Enum.LeftRight.Center
+                tb = if math.sign(cursorPosition.Y) == -1 then Enum.TopBottom.Top else Enum.TopBottom.Bottom
             end
-            isResizing = true
-            resizeWindow = focusedWindow
-            activeWindowInput = input
-            lastCursorPosition = inputPosition(input)
+            beginResize(focusedWindow, tb, lr, input)
         end
     end)
 
@@ -332,38 +360,52 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local intendedPosition = mouseLocation - moveDeltaCursorPosition
             local newPos = fitPositionToWindowBounds(dragWindow, intendedPosition)
 
-            -- state shouldnt be used like this, but calling :set would run the entire UpdateState function for the window, which is slow.
             dragInstance.Position = UDim2.fromOffset(newPos.X, newPos.Y)
             dragWindow.state.position.value = newPos
         end
         if isResizing and resizeWindow and resizeWindow.arguments.NoResize ~= true then
             local Window = resizeWindow.Instance :: Frame
-            local resizeInstance: TextButton = Window.WindowButton
-            local windowPosition = Vector2.new(resizeInstance.Position.X.Offset, resizeInstance.Position.Y.Offset)
-            local windowSize = Vector2.new(resizeInstance.Size.X.Offset, resizeInstance.Size.Y.Offset)
+            local resizeInstance: TextButton? = Window and Window:FindFirstChild("WindowButton") :: any
+            if resizeInstance then
+                local currentCursor = inputPosition(input)
+                local totalDelta = (currentCursor - resizeStartCursor) / resizeWindowScale
 
-            local mouseDelta
-            if input.UserInputType == Enum.UserInputType.Touch then
-                mouseDelta = input.Delta / getInterfaceScale(resizeWindow)
-            else
-                mouseDelta = (widgets.getMouseLocation() - lastCursorPosition) / getInterfaceScale(resizeWindow)
-            end
+                local deltaX = 0
+                local posXDelta = 0
+                if resizeFromLeftRight == Enum.LeftRight.Right then
+                    deltaX = totalDelta.X
+                elseif resizeFromLeftRight == Enum.LeftRight.Left then
+                    deltaX = -totalDelta.X
+                    posXDelta = totalDelta.X
+                end
 
-            local intendedPosition = windowPosition + Vector2.new(if resizeFromLeftRight == Enum.LeftRight.Left then mouseDelta.X else 0, if resizeFromTopBottom == Enum.TopBottom.Top then mouseDelta.Y else 0)
+                local deltaY = 0
+                local posYDelta = 0
+                if resizeFromTopBottom == Enum.TopBottom.Bottom then
+                    deltaY = totalDelta.Y
+                elseif resizeFromTopBottom == Enum.TopBottom.Top then
+                    deltaY = -totalDelta.Y
+                    posYDelta = totalDelta.Y
+                end
 
-            local intendedSize = windowSize
-                + Vector2.new(
-                    if resizeFromLeftRight == Enum.LeftRight.Left then -mouseDelta.X elseif resizeFromLeftRight == Enum.LeftRight.Right then mouseDelta.X else 0,
-                    if resizeFromTopBottom == Enum.TopBottom.Top then -mouseDelta.Y elseif resizeFromTopBottom == Enum.TopBottom.Bottom then mouseDelta.Y else 0
+                local intendedSize = Vector2.new(
+                    math.max(100, resizeStartWindowSize.X + deltaX),
+                    math.max(40, resizeStartWindowSize.Y + deltaY)
                 )
 
-            local newSize = fitSizeToWindowBounds(resizeWindow, intendedSize)
-            local newPosition = fitPositionToWindowBounds(resizeWindow, intendedPosition)
+                local intendedPosition = Vector2.new(
+                    resizeStartWindowPos.X + posXDelta,
+                    resizeStartWindowPos.Y + posYDelta
+                )
 
-            resizeInstance.Size = UDim2.fromOffset(newSize.X, newSize.Y)
-            resizeWindow.state.size.value = newSize
-            resizeInstance.Position = UDim2.fromOffset(newPosition.X, newPosition.Y)
-            resizeWindow.state.position.value = newPosition
+                local newSize = fitSizeToWindowBounds(resizeWindow, intendedSize)
+                local newPosition = fitPositionToWindowBounds(resizeWindow, intendedPosition)
+
+                resizeInstance.Size = UDim2.fromOffset(newSize.X, newSize.Y)
+                resizeWindow.state.size.value = newSize
+                resizeInstance.Position = UDim2.fromOffset(newPosition.X, newPosition.Y)
+                resizeWindow.state.position.value = newPosition
+            end
         end
 
         lastCursorPosition = inputPosition(input)
@@ -719,16 +761,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             })
 
             widgets.applyInputDown(LeftResizeGrip, function(input: InputObject)
-                if not anyFocusedWindow or not (focusedWindow == thisWidget) then
-                    Iris.SetFocusedWindow(thisWidget)
-                    -- mitigating wrong focus when clicking on buttons inside of a window without clicking the window itself
-                end
-                isResizing = true
-                resizeFromTopBottom = Enum.TopBottom.Bottom
-                resizeFromLeftRight = Enum.LeftRight.Left
-                resizeWindow = thisWidget
-                activeWindowInput = input
-                lastCursorPosition = inputPosition(input)
+                beginResize(thisWidget, Enum.TopBottom.Bottom, Enum.LeftRight.Left, input)
             end)
 
             -- each border uses an image, allowing it to have a visible borde which is larger than the UI
@@ -757,16 +790,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             })
 
             widgets.applyInputDown(RightResizeGrip, function(input: InputObject)
-                if not anyFocusedWindow or not (focusedWindow == thisWidget) then
-                    Iris.SetFocusedWindow(thisWidget)
-                    -- mitigating wrong focus when clicking on buttons inside of a window without clicking the window itself
-                end
-                isResizing = true
-                resizeFromTopBottom = Enum.TopBottom.Bottom
-                resizeFromLeftRight = Enum.LeftRight.Right
-                resizeWindow = thisWidget
-                activeWindowInput = input
-                lastCursorPosition = inputPosition(input)
+                beginResize(thisWidget, Enum.TopBottom.Bottom, Enum.LeftRight.Right, input)
             end)
 
             local LeftResizeBorder = Instance.new("ImageButton")
