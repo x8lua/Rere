@@ -7333,13 +7333,17 @@ sources[nodes['widgets/Button']] = function(script)
                         thisWidget.lastClickedTick = -1
 
                         widgets.applyButtonClick(clickedGuiObject, function()
-                            if not thisWidget.arguments.Disabled then
+                            local args = thisWidget.arguments or {}
+                            local disabled = args.Disabled == true or args[3] == true
+                            if not disabled then
                                 thisWidget.lastClickedTick = Iris._cycleTick + 1
                             end
                         end)
                     end,
                     ["Get"] = function(thisWidget: Types.Widget & Types.Clicked)
-                        if thisWidget.arguments.Disabled then
+                        local args = thisWidget.arguments or {}
+                        local disabled = args.Disabled == true or args[3] == true
+                        if disabled then
                             return false
                         end
                         return thisWidget.lastClickedTick == Iris._cycleTick
@@ -7351,13 +7355,17 @@ sources[nodes['widgets/Button']] = function(script)
                         thisWidget.lastDeclinedTick = -1
 
                         widgets.applyButtonClick(clickedGuiObject, function()
-                            if thisWidget.arguments.Disabled then
+                            local args = thisWidget.arguments or {}
+                            local disabled = args.Disabled == true or args[3] == true
+                            if disabled then
                                 thisWidget.lastDeclinedTick = Iris._cycleTick + 1
                             end
                         end)
                     end,
                     ["Get"] = function(thisWidget: Types.Widget)
-                        if not thisWidget.arguments.Disabled then
+                        local args = thisWidget.arguments or {}
+                        local disabled = args.Disabled == true or args[3] == true
+                        if not disabled then
                             return false
                         end
                         return thisWidget.lastDeclinedTick == Iris._cycleTick
@@ -7390,14 +7398,18 @@ sources[nodes['widgets/Button']] = function(script)
                 widgets.applyFrameStyle(Button)
 
                 widgets.applyMouseEnter(Button, function()
-                    if _thisWidget.arguments and _thisWidget.arguments.Disabled then return end
+                    local args = _thisWidget.arguments or {}
+                    local disabled = args.Disabled == true or args[3] == true
+                    if disabled then return end
                     Button.BackgroundColor3 = Iris._config.ButtonHoveredColor
                     Button.BackgroundTransparency = Iris._config.ButtonHoveredTransparency
                 end)
 
                 widgets.applyMouseLeave(Button, function()
-                    if _thisWidget.arguments and _thisWidget.arguments.Disabled then
-                        Button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+                    local args = _thisWidget.arguments or {}
+                    local disabled = args.Disabled == true or args[3] == true
+                    if disabled then
+                        Button.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
                         Button.BackgroundTransparency = 0.2
                         return
                     end
@@ -7406,7 +7418,9 @@ sources[nodes['widgets/Button']] = function(script)
                 end)
 
                 widgets.applyInputBegan(Button, function(input: InputObject)
-                    if _thisWidget.arguments and _thisWidget.arguments.Disabled then return end
+                    local args = _thisWidget.arguments or {}
+                    local disabled = args.Disabled == true or args[3] == true
+                    if disabled then return end
                     if not (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Gamepad1) then
                         return
                     end
@@ -7415,8 +7429,10 @@ sources[nodes['widgets/Button']] = function(script)
                 end)
 
                 widgets.applyInputEnded(Button, function(input: InputObject)
-                    if _thisWidget.arguments and _thisWidget.arguments.Disabled then
-                        Button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+                    local args = _thisWidget.arguments or {}
+                    local disabled = args.Disabled == true or args[3] == true
+                    if disabled then
+                        Button.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
                         Button.BackgroundTransparency = 0.2
                         return
                     end
@@ -7438,13 +7454,16 @@ sources[nodes['widgets/Button']] = function(script)
             end,
             Update = function(thisWidget: Types.Button)
                 local Button = thisWidget.Instance :: TextButton
-                Button.Text = thisWidget.arguments.Text or "Button"
-                Button.Size = thisWidget.arguments.Size or UDim2.fromOffset(0, 0)
+                local args = thisWidget.arguments or {}
+                local disabled = args.Disabled == true or args[3] == true
 
-                if thisWidget.arguments.Disabled then
-                    Button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-                    Button.BackgroundTransparency = 0.25
-                    Button.TextColor3 = Color3.fromRGB(90, 90, 95)
+                Button.Text = args.Text or args[1] or "Button"
+                Button.Size = args.Size or args[2] or UDim2.fromOffset(0, 0)
+
+                if disabled then
+                    Button.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+                    Button.BackgroundTransparency = 0.2
+                    Button.TextColor3 = Color3.fromRGB(80, 80, 85)
                     Button.AutoButtonColor = false
                 else
                     Button.BackgroundColor3 = Iris._config.ButtonColor
