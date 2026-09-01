@@ -86,7 +86,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
     local activeWindowInput: InputObject? = nil
 
     local function inputPosition(input: InputObject): Vector2
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+        if input.UserInputType == Enum.UserInputType.Touch then
             return Vector2.new(input.Position.X, input.Position.Y) - widgets.MouseOffset
         end
         return widgets.getMouseLocation()

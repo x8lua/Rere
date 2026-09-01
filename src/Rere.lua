@@ -8847,7 +8847,7 @@ sources[nodes['widgets/Input']] = function(script)
             local ActiveInput: InputObject? = nil
 
             local function inputPosition(inputObject: InputObject): Vector2
-                if inputObject.UserInputType == Enum.UserInputType.Touch or inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+                if inputObject.UserInputType == Enum.UserInputType.Touch then
                     return Vector2.new(inputObject.Position.X, inputObject.Position.Y) - widgets.MouseOffset
                 end
                 return widgets.getMouseLocation()
@@ -9237,7 +9237,7 @@ sources[nodes['widgets/Input']] = function(script)
             local ActiveInput: InputObject? = nil
 
             local function inputPosition(inputObject: InputObject): Vector2
-                if inputObject.UserInputType == Enum.UserInputType.Touch or inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+                if inputObject.UserInputType == Enum.UserInputType.Touch then
                     return Vector2.new(inputObject.Position.X, inputObject.Position.Y) - widgets.MouseOffset
                 end
                 return widgets.getMouseLocation()
@@ -12794,7 +12794,7 @@ sources[nodes['widgets/Window']] = function(script)
         local activeWindowInput: InputObject? = nil
 
         local function inputPosition(input: InputObject): Vector2
-            if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+            if input.UserInputType == Enum.UserInputType.Touch then
                 return Vector2.new(input.Position.X, input.Position.Y) - widgets.MouseOffset
             end
             return widgets.getMouseLocation()
