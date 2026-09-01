@@ -12740,7 +12740,8 @@ sources[nodes['widgets/Window']] = function(script)
         local windowDisplayOrder = 0 -- incremental count which is used for determining focused windows ZIndex
         local dragWindow: Types.Window? -- window being dragged, may be nil
         local isDragging = false
-        local moveDeltaCursorPosition: Vector2 -- cursor offset from drag origin (top left of window)
+        local dragStartCursor = Vector2.zero
+        local dragStartWindowPos = Vector2.zero
 
         local resizeWindow: Types.Window? -- window being resized, may be nil
         local isResizing = false
@@ -12977,12 +12978,18 @@ sources[nodes['widgets/Window']] = function(script)
                 for _, window in windowWidgets do
                     local Window = window.Instance
                     if Window and not window.arguments.NoMove then
-                        local TitleBar = Window.WindowButton.Content:FindFirstChild("TitleBar")
+                        local WindowButton = Window:FindFirstChild("WindowButton") :: TextButton?
+                        local TitleBar = WindowButton and WindowButton.Content:FindFirstChild("TitleBar")
                         if TitleBar and widgets.isPosInsideRect(position, TitleBar.AbsolutePosition - widgets.GuiOffset, TitleBar.AbsolutePosition - widgets.GuiOffset + TitleBar.AbsoluteSize) then
                             dragWindow = window
                             isDragging = true
                             activeWindowInput = input
-                            moveDeltaCursorPosition = position - window.state.position.value
+                            dragStartCursor = position
+                            if WindowButton then
+                                dragStartWindowPos = Vector2.new(WindowButton.Position.X.Offset, WindowButton.Position.Y.Offset)
+                            else
+                                dragStartWindowPos = Vector2.new(window.state.position.value.X, window.state.position.value.Y)
+                            end
                             break
                         end
                     end
@@ -13024,12 +13031,15 @@ sources[nodes['widgets/Window']] = function(script)
             if isDragging and dragWindow then
                 local mouseLocation = inputPosition(input)
                 local Window = dragWindow.Instance :: Frame
-                local dragInstance: TextButton = Window.WindowButton
-                local intendedPosition = mouseLocation - moveDeltaCursorPosition
-                local newPos = fitPositionToWindowBounds(dragWindow, intendedPosition)
+                local dragInstance: TextButton? = Window and Window:FindFirstChild("WindowButton") :: any
+                if dragInstance then
+                    local totalDelta = mouseLocation - dragStartCursor
+                    local intendedPosition = dragStartWindowPos + totalDelta
+                    local newPos = fitPositionToWindowBounds(dragWindow, intendedPosition)
 
-                dragInstance.Position = UDim2.fromOffset(newPos.X, newPos.Y)
-                dragWindow.state.position.value = newPos
+                    dragInstance.Position = UDim2.fromOffset(newPos.X, newPos.Y)
+                    dragWindow.state.position.value = newPos
+                end
             end
             if isResizing and resizeWindow and resizeWindow.arguments.NoResize ~= true then
                 local Window = resizeWindow.Instance :: Frame
