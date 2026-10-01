@@ -58,7 +58,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             TabBar.Name = "Iris_TabBar"
             TabBar.AutomaticSize = Enum.AutomaticSize.Y
             TabBar.Size = UDim2.fromScale(1, 0)
-            TabBar.BackgroundTransparency = 1
+            TabBar.BackgroundColor3 = Iris._config.WindowBgColor:Lerp(Color3.new(1, 1, 1), 0.06)
+            TabBar.BackgroundTransparency = 0
             TabBar.BorderSizePixel = 0
 
             widgets.UIListLayout(TabBar, Enum.FillDirection.Vertical, UDim.new(0, 0)).VerticalAlignment = Enum.VerticalAlignment.Bottom
@@ -84,7 +85,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local Rail = Instance.new("Frame")
             Rail.Name = "BetaRail"
             Rail.Size = UDim2.new(1, 0, 0, 21)
-            Rail.BackgroundTransparency = 1
+            Rail.BackgroundColor3 = TabBar.BackgroundColor3
+            Rail.BackgroundTransparency = 0
             Rail.BorderSizePixel = 0
             Rail.Parent = TabBar
             -- Keep the scroll container on the widget for selection and overflow navigation.
@@ -98,7 +100,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 arrow.AnchorPoint = Vector2.new(1, 0)
                 arrow.Position = UDim2.new(1, index == 1 and -20 or 0, 0, 0)
                 arrow.Size = UDim2.fromOffset(19, 20)
-                arrow.BackgroundColor3 = Iris._config.MenubarBgColor
+                arrow.BackgroundColor3 = Rail.BackgroundColor3
                 arrow.BorderSizePixel = 0
                 arrow.Text = direction == -1 and "<" or ">"
                 arrow.FontFace = Font.fromEnum(Enum.Font.Arial)
@@ -150,7 +152,15 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
 
             return TabBar
         end,
-        Update = function(_thisWidget: Types.TabBar) end,
+        Update = function(thisWidget: Types.TabBar)
+            local color = Iris._config.WindowBgColor:Lerp(Color3.new(1, 1, 1), 0.06)
+            thisWidget.Instance.BackgroundColor3 = color
+            local rail = thisWidget.Instance.BetaRail
+            rail.BackgroundColor3 = color
+            for _, child in ipairs(rail:GetChildren()) do
+                if child:IsA("TextButton") then child.BackgroundColor3 = color end
+            end
+        end,
         ChildAdded = function(thisWidget: Types.TabBar, thisChild: Types.Tab)
             assert(thisChild.type == "Tab", "Only Iris.Tab can be parented to Iris.TabBar.")
             local TabBar = thisWidget.Instance :: Frame

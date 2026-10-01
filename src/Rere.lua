@@ -11295,7 +11295,8 @@ sources[nodes['widgets/Tab']] = function(script)
                 TabBar.Name = "Iris_TabBar"
                 TabBar.AutomaticSize = Enum.AutomaticSize.Y
                 TabBar.Size = UDim2.fromScale(1, 0)
-                TabBar.BackgroundTransparency = 1
+                TabBar.BackgroundColor3 = Iris._config.WindowBgColor:Lerp(Color3.new(1, 1, 1), 0.06)
+                TabBar.BackgroundTransparency = 0
                 TabBar.BorderSizePixel = 0
 
                 widgets.UIListLayout(TabBar, Enum.FillDirection.Vertical, UDim.new(0, 0)).VerticalAlignment = Enum.VerticalAlignment.Bottom
@@ -11321,7 +11322,8 @@ sources[nodes['widgets/Tab']] = function(script)
                 local Rail = Instance.new("Frame")
                 Rail.Name = "BetaRail"
                 Rail.Size = UDim2.new(1, 0, 0, 21)
-                Rail.BackgroundTransparency = 1
+                Rail.BackgroundColor3 = TabBar.BackgroundColor3
+                Rail.BackgroundTransparency = 0
                 Rail.BorderSizePixel = 0
                 Rail.Parent = TabBar
                 -- Keep the scroll container on the widget for selection and overflow navigation.
@@ -11335,7 +11337,7 @@ sources[nodes['widgets/Tab']] = function(script)
                     arrow.AnchorPoint = Vector2.new(1, 0)
                     arrow.Position = UDim2.new(1, index == 1 and -20 or 0, 0, 0)
                     arrow.Size = UDim2.fromOffset(19, 20)
-                    arrow.BackgroundColor3 = Iris._config.MenubarBgColor
+                    arrow.BackgroundColor3 = Rail.BackgroundColor3
                     arrow.BorderSizePixel = 0
                     arrow.Text = direction == -1 and "<" or ">"
                     arrow.FontFace = Font.fromEnum(Enum.Font.Arial)
@@ -11387,7 +11389,15 @@ sources[nodes['widgets/Tab']] = function(script)
 
                 return TabBar
             end,
-            Update = function(_thisWidget: Types.TabBar) end,
+            Update = function(thisWidget: Types.TabBar)
+                local color = Iris._config.WindowBgColor:Lerp(Color3.new(1, 1, 1), 0.06)
+                thisWidget.Instance.BackgroundColor3 = color
+                local rail = thisWidget.Instance.BetaRail
+                rail.BackgroundColor3 = color
+                for _, child in ipairs(rail:GetChildren()) do
+                    if child:IsA("TextButton") then child.BackgroundColor3 = color end
+                end
+            end,
             ChildAdded = function(thisWidget: Types.TabBar, thisChild: Types.Tab)
                 assert(thisChild.type == "Tab", "Only Iris.Tab can be parented to Iris.TabBar.")
                 local TabBar = thisWidget.Instance :: Frame
@@ -14463,5 +14473,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261001004"
+RereBeta.BetaVersion = "20261001005"
 return RereBeta
