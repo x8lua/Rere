@@ -11417,8 +11417,9 @@ sources[nodes['widgets/Tab']] = function(script)
             UpdateState = function(_thisWidget: Types.Tab)
             end,
             Discard = function(thisWidget: Types.TabBar)
-                if thisWidget.parentWidget.BetaTabBars then
-                    thisWidget.parentWidget.BetaTabBars[thisWidget.ID] = nil
+                local tabBars = rawget(thisWidget.parentWidget, "BetaTabBars")
+                if tabBars then
+                    tabBars[thisWidget.ID] = nil
                 end
                 thisWidget.ChildContainer:Destroy()
                 thisWidget.Instance:Destroy()
@@ -13854,7 +13855,7 @@ sources[nodes['widgets/Window']] = function(script)
                 local stateIsUncollapsed = thisWidget.state.isUncollapsed.value
                 local stateIsOpened = thisWidget.state.isOpened.value
                 local stateScrollDistance = thisWidget.state.scrollDistance.value
-                for _, tabBar in thisWidget.BetaTabBars or {} do
+                for _, tabBar in rawget(thisWidget, "BetaTabBars") or {} do
                     tabBar.Instance.Visible = stateIsUncollapsed
                 end
 
@@ -13964,7 +13965,7 @@ sources[nodes['widgets/Window']] = function(script)
                 local Content = WindowButton.Content :: Frame
                 if thisChid.type == "TabBar" then
                     -- Pin the rail in the window layout; only the tab contents enter its scrolling canvas.
-                    thisWidget.BetaTabBars = thisWidget.BetaTabBars or {}
+                    thisWidget.BetaTabBars = rawget(thisWidget, "BetaTabBars") or {}
                     thisWidget.BetaTabBars[thisChid.ID] = thisChid
                     thisChid.ChildContainer.Parent = thisWidget.ChildContainer
                     thisChid.Instance.LayoutOrder = thisWidget.ChildContainer.LayoutOrder - 1
@@ -14460,5 +14461,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261001003"
+RereBeta.BetaVersion = "20261001004"
 return RereBeta

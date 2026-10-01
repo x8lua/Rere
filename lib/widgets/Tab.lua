@@ -180,8 +180,9 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         UpdateState = function(_thisWidget: Types.Tab)
         end,
         Discard = function(thisWidget: Types.TabBar)
-            if thisWidget.parentWidget.BetaTabBars then
-                thisWidget.parentWidget.BetaTabBars[thisWidget.ID] = nil
+            local tabBars = rawget(thisWidget.parentWidget, "BetaTabBars")
+            if tabBars then
+                tabBars[thisWidget.ID] = nil
             end
             thisWidget.ChildContainer:Destroy()
             thisWidget.Instance:Destroy()

@@ -1056,7 +1056,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local stateIsUncollapsed = thisWidget.state.isUncollapsed.value
             local stateIsOpened = thisWidget.state.isOpened.value
             local stateScrollDistance = thisWidget.state.scrollDistance.value
-            for _, tabBar in thisWidget.BetaTabBars or {} do
+            for _, tabBar in rawget(thisWidget, "BetaTabBars") or {} do
                 tabBar.Instance.Visible = stateIsUncollapsed
             end
 
@@ -1166,7 +1166,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local Content = WindowButton.Content :: Frame
             if thisChid.type == "TabBar" then
                 -- Pin the rail in the window layout; only the tab contents enter its scrolling canvas.
-                thisWidget.BetaTabBars = thisWidget.BetaTabBars or {}
+                thisWidget.BetaTabBars = rawget(thisWidget, "BetaTabBars") or {}
                 thisWidget.BetaTabBars[thisChid.ID] = thisChid
                 thisChid.ChildContainer.Parent = thisWidget.ChildContainer
                 thisChid.Instance.LayoutOrder = thisWidget.ChildContainer.LayoutOrder - 1
