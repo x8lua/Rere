@@ -204,6 +204,10 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
     end
 
     local function fitPositionToWindowBounds(thisWidget: Types.Window, intendedPosition: Vector2)
+        -- Some overlay windows intentionally allow their title bar to leave the viewport.
+        if thisWidget.arguments.OutOfBounds == true then
+            return intendedPosition
+        end
         local thisWidgetInstance = thisWidget.Instance
         local usableSize = widgets.getScreenSizeForWindow(thisWidget)
         local safeAreaPadding = Vector2.new(Iris._config.WindowBorderSize + Iris._config.DisplaySafeAreaPadding.X, Iris._config.WindowBorderSize + Iris._config.DisplaySafeAreaPadding.Y)
@@ -470,6 +474,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             ["NoResize"] = 8,
             ["NoNav"] = 9,
             ["NoMenu"] = 10,
+            ["OutOfBounds"] = 11,
         },
         Events = {
             ["closed"] = {

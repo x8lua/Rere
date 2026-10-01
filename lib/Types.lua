@@ -119,6 +119,7 @@ export type Arguments = {
     NoScrollbar: boolean,
     NoResize: boolean,
     NoMenu: boolean,
+    OutOfBounds: boolean,
 
     KeyCode: Enum.KeyCode,
     ModifierKey: Enum.ModifierKey,
