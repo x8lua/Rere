@@ -13968,6 +13968,8 @@ sources[nodes['widgets/Window']] = function(script)
                     thisWidget.BetaTabBars = rawget(thisWidget, "BetaTabBars") or {}
                     thisWidget.BetaTabBars[thisChid.ID] = thisChid
                     thisChid.ChildContainer.Parent = thisWidget.ChildContainer
+                    thisChid.Instance.AutomaticSize = Enum.AutomaticSize.None
+                    thisChid.Instance.Size = UDim2.new(1, 0, 0, 22)
                     thisChid.Instance.LayoutOrder = thisWidget.ChildContainer.LayoutOrder - 1
                     thisChid.Instance.Visible = thisWidget.state.isUncollapsed.value
                     return Content
