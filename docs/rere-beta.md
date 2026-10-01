@@ -6,12 +6,13 @@ The `rere-beta` branch retains the Rere/Iris API and changes Tab and TabBar pres
 local Rere = loadstring(game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/rere-beta/src/rere-beta.lua"))()
 ```
 
-Tabs use Arial, Arial Bold for selection, compact numbered labels, a category color edge,
-and a border around the selected tab. Narrow windows scroll horizontally with fixed arrow
-buttons. Selecting the active tab keeps it open; content switches immediately.
+Tabs use Arial, Arial Bold for selection, compact numbered labels, a blue edge,
+and a border around the selected tab. The rail is 21 pixels high with 20 pixel tabs.
+Narrow windows scroll horizontally; arrow buttons appear only when tabs overflow.
+Selecting the active tab keeps it open; content switches immediately.
 
-Known LarpKuran utility and setup names receive amber and sage accents. Other tab names
-use blue. This affects presentation only; existing tab arguments, state, and events remain.
+Colors come from the active Rere configuration, including its dark background, blue
+selection, and hover colors. Existing tab arguments, state, and events remain.
 
 Edit `lib/widgets/Tab.lua`, then run `node tools/build-executor.mjs` to generate both
 `src/Rere.lua` and `src/rere-beta.lua`. The source LarpKuran copy remains a separate local

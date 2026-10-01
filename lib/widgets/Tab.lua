@@ -1,33 +1,25 @@
 local Types = require(script.Parent.Parent.Types)
 
 return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
-    local TweenService = game:GetService("TweenService")
     local TextService = game:GetService("TextService")
-    local colors = {
-        idle = Color3.fromRGB(38, 40, 45), active = Color3.fromRGB(49, 52, 59),
-        border = Color3.fromRGB(65, 68, 75), text = Color3.fromRGB(226, 228, 232),
-        muted = Color3.fromRGB(146, 151, 161),
-    }
-    local function category(name)
-        if name == "Fling" or name == "Fun" or name == "Draw" or name == "Stand" then
-            return Color3.fromRGB(192, 164, 115)
-        elseif name == "Keybinds" or name == "Roll" or name == "Config" then
-            return Color3.fromRGB(157, 176, 154)
-        end
-        return Color3.fromRGB(134, 183, 219)
-    end
     local function styleTab(widget)
         local tab = widget.Instance
         local active = widget.state and widget.state.isOpened and widget.state.isOpened.value == true
-        local accent = category(widget.arguments.Text)
-        tab.BackgroundColor3 = active and colors.active or colors.idle
-        tab.TextLabel.TextColor3 = active and colors.text or colors.muted
+        local config = Iris._config
+        tab.BackgroundColor3 = active and config.TabActiveColor or config.TabColor
+        tab.BackgroundTransparency = active and config.TabActiveTransparency or config.TabTransparency
+        tab.TextLabel.TextColor3 = config.TextColor
+        tab.TextLabel.TextTransparency = active and config.TextTransparency or 0.15
         tab.TextLabel.FontFace = Font.fromEnum(active and Enum.Font.ArialBold or Enum.Font.Arial)
-        tab.BetaEdge.BackgroundColor3 = accent
+        tab.BetaEdge.BackgroundColor3 = config.SliderGrabColor
         tab.BetaEdge.Visible = active
-        tab.BetaNumber.TextColor3 = accent
+        tab.BetaNumber.TextColor3 = config.TextColor
+        tab.BetaNumber.TextTransparency = active and 0.25 or 0.5
         tab.BetaNumber.Text = string.format("%02d", widget.Index or 1)
-        tab.BetaBorder.Transparency = active and 0 or 1
+        tab.BetaBorder.Color = config.TabActiveColor
+        tab.BetaBorder.Transparency = active and 0.3 or 1
+        tab.BetaJoin.BackgroundColor3 = config.TabActiveColor
+        tab.BetaJoin.BackgroundTransparency = config.TabActiveTransparency
         tab.BetaJoin.Visible = active
     end
     local function reveal(widget)
@@ -74,7 +66,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local Bar = Instance.new("ScrollingFrame")
             Bar.Name = "Bar"
             Bar.AutomaticSize = Enum.AutomaticSize.None
-            Bar.Size = UDim2.new(1, -58, 0, 30)
+            Bar.Size = UDim2.new(1, 0, 0, 21)
             Bar.CanvasSize = UDim2.new()
             Bar.AutomaticCanvasSize = Enum.AutomaticSize.X
             Bar.ScrollingDirection = Enum.ScrollingDirection.X
@@ -85,11 +77,12 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             Bar.BackgroundTransparency = 1
             Bar.BorderSizePixel = 0
             
-            widgets.UIListLayout(Bar, Enum.FillDirection.Horizontal, UDim.new(0, 3)).VerticalAlignment = Enum.VerticalAlignment.Bottom
+            local layout = widgets.UIListLayout(Bar, Enum.FillDirection.Horizontal, UDim.new(0, 1))
+            layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
 
             local Rail = Instance.new("Frame")
             Rail.Name = "BetaRail"
-            Rail.Size = UDim2.new(1, 0, 0, 30)
+            Rail.Size = UDim2.new(1, 0, 0, 21)
             Rail.BackgroundTransparency = 1
             Rail.BorderSizePixel = 0
             Rail.Parent = TabBar
@@ -97,31 +90,43 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             Rail.Visible = true
             Bar.Parent = Rail
             thisWidget.Bar = Bar
+            local arrows = {}
             for index, direction in ipairs({-1, 1}) do
                 local arrow = Instance.new("TextButton")
                 arrow.Name = "BetaArrow" .. index
                 arrow.AnchorPoint = Vector2.new(1, 0)
-                arrow.Position = UDim2.new(1, index == 1 and -29 or 0, 0, 0)
-                arrow.Size = UDim2.fromOffset(26, 29)
-                arrow.BackgroundColor3 = colors.idle
+                arrow.Position = UDim2.new(1, index == 1 and -20 or 0, 0, 0)
+                arrow.Size = UDim2.fromOffset(19, 20)
+                arrow.BackgroundColor3 = Iris._config.MenubarBgColor
                 arrow.BorderSizePixel = 0
                 arrow.Text = direction == -1 and "<" or ">"
                 arrow.FontFace = Font.fromEnum(Enum.Font.Arial)
-                arrow.TextSize = 13
-                arrow.TextColor3 = colors.muted
+                arrow.TextSize = 12
+                arrow.TextColor3 = Iris._config.TextColor
+                arrow.TextTransparency = 0.3
                 arrow.AutoButtonColor = false
                 arrow.Parent = Rail
+                arrows[index] = arrow
                 widgets.applyButtonClick(arrow, function()
                     local maximum = math.max(0, Bar.AbsoluteCanvasSize.X - Bar.AbsoluteWindowSize.X)
                     Bar.CanvasPosition = Vector2.new(math.clamp(Bar.CanvasPosition.X + direction * 140, 0, maximum), 0)
                 end)
             end
+            local function resizeRail()
+                local overflow = layout.AbsoluteContentSize.X > Rail.AbsoluteSize.X
+                Bar.Size = UDim2.new(1, overflow and -42 or 0, 0, 21)
+                for _, arrow in ipairs(arrows) do arrow.Visible = overflow end
+                if not overflow then Bar.CanvasPosition = Vector2.zero end
+            end
+            layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(resizeRail)
+            Rail:GetPropertyChangedSignal("AbsoluteSize"):Connect(resizeRail)
+            resizeRail()
 
             local Underline = Instance.new("Frame")
             Underline.Name = "Underline"
             Underline.Size = UDim2.new(1, 0, 0, 1)
-            Underline.BackgroundColor3 = colors.border
-            Underline.BackgroundTransparency = 0
+            Underline.BackgroundColor3 = Iris._config.BorderColor
+            Underline.BackgroundTransparency = Iris._config.BorderTransparency
             Underline.BorderSizePixel = 0
             Underline.LayoutOrder = 1
             Underline.Visible = true
@@ -228,7 +233,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local Tab = Instance.new("TextButton")
             Tab.Name = "Iris_Tab"
             Tab.AutomaticSize = Enum.AutomaticSize.None
-            Tab.Size = UDim2.fromOffset(64, 29)
+            Tab.Size = UDim2.fromOffset(54, 20)
             Tab.BackgroundColor3 = Iris._config.TabColor
             Tab.BackgroundTransparency = 0
             Tab.BorderSizePixel = 0
@@ -236,11 +241,12 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             Tab.AutoButtonColor = false
 
             local rounding = Instance.new("UICorner")
-            rounding.CornerRadius = UDim.new(0, 3)
+            rounding.CornerRadius = UDim.new(0, 2)
             rounding.Parent = Tab
             Tab.MouseEnter:Connect(function()
-                Tab.BackgroundColor3 = colors.active
-                Tab.TextLabel.TextColor3 = colors.text
+                Tab.BackgroundColor3 = Iris._config.TabHoveredColor
+                Tab.BackgroundTransparency = Iris._config.TabHoveredTransparency
+                Tab.TextLabel.TextTransparency = 0
             end)
             Tab.MouseLeave:Connect(function() styleTab(thisWidget) end)
             widgets.applyButtonClick(Tab, function()
@@ -251,8 +257,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local TextLabel = Instance.new("TextLabel")
             TextLabel.Name = "TextLabel"
             TextLabel.AutomaticSize = Enum.AutomaticSize.None
-            TextLabel.Position = UDim2.fromOffset(17, 0)
-            TextLabel.Size = UDim2.new(1, -24, 1, 0)
+            TextLabel.Position = UDim2.fromOffset(14, 0)
+            TextLabel.Size = UDim2.new(1, -19, 1, 0)
             TextLabel.BackgroundTransparency = 1
             TextLabel.BorderSizePixel = 0
 
@@ -262,34 +268,34 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local number = Instance.new("TextLabel")
             number.Name = "BetaNumber"
             number.BackgroundTransparency = 1
-            number.Position = UDim2.fromOffset(4, 0)
-            number.Size = UDim2.fromOffset(11, 29)
+            number.Position = UDim2.fromOffset(2, 0)
+            number.Size = UDim2.fromOffset(10, 20)
             number.FontFace = Font.fromEnum(Enum.Font.Code)
             number.TextSize = 8
             number.Parent = Tab
             local edge = Instance.new("Frame")
             edge.Name = "BetaEdge"
-            edge.Size = UDim2.new(1, -6, 0, 2)
+            edge.Size = UDim2.new(1, -6, 0, 1)
             edge.Position = UDim2.fromOffset(3, 0)
             edge.BorderSizePixel = 0
             edge.Parent = Tab
             local border = Instance.new("UIStroke")
             border.Name = "BetaBorder"
             border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-            border.Color = colors.border
+            border.Color = Iris._config.TabActiveColor
             border.Thickness = 1
             border.Parent = Tab
             local join = Instance.new("Frame")
             join.Name = "BetaJoin"
             join.Position = UDim2.new(0, 0, 1, -2)
             join.Size = UDim2.new(1, 0, 0, 3)
-            join.BackgroundColor3 = colors.active
+            join.BackgroundColor3 = Iris._config.TabActiveColor
             join.BorderSizePixel = 0
             join.Parent = Tab
 
             TextLabel.Parent = Tab
 
-            local ButtonSize = Iris._config.TextSize + ((Iris._config.FramePadding.Y - 1) * 2)
+            local ButtonSize = 14
 
             local CloseButton = Instance.new("TextButton")
             CloseButton.Name = "CloseButton"
@@ -359,9 +365,9 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local CloseButton: TextButton = Tab.CloseButton
 
             TextLabel.Text = thisWidget.arguments.Text
-            local width = TextService:GetTextSize(TextLabel.Text, 12, Enum.Font.ArialBold, Vector2.new(1000, 30)).X
-            Tab.Size = UDim2.fromOffset(math.ceil(width) + 28 + (thisWidget.arguments.Hideable and 20 or 0), 29)
-            TextLabel.Size = UDim2.new(1, -(thisWidget.arguments.Hideable and 44 or 24), 1, 0)
+            local width = TextService:GetTextSize(TextLabel.Text, 12, Enum.Font.ArialBold, Vector2.new(1000, 21)).X
+            Tab.Size = UDim2.fromOffset(math.ceil(width) + 20 + (thisWidget.arguments.Hideable and 17 or 0), 20)
+            TextLabel.Size = UDim2.new(1, -(thisWidget.arguments.Hideable and 36 or 19), 1, 0)
             styleTab(thisWidget)
             CloseButton.Visible = if thisWidget.arguments.Hideable == true then true else false
         end,
