@@ -11307,6 +11307,7 @@ sources[nodes['widgets/Tab']] = function(script)
                 Bar.CanvasSize = UDim2.new()
                 Bar.AutomaticCanvasSize = Enum.AutomaticSize.X
                 Bar.ScrollingDirection = Enum.ScrollingDirection.X
+                Bar.ScrollingEnabled = false
                 Bar.ScrollBarThickness = 0
                 Bar.ElasticBehavior = Enum.ElasticBehavior.Never
                 Bar.ClipsDescendants = true
@@ -11416,6 +11417,10 @@ sources[nodes['widgets/Tab']] = function(script)
             UpdateState = function(_thisWidget: Types.Tab)
             end,
             Discard = function(thisWidget: Types.TabBar)
+                if thisWidget.parentWidget.BetaTabBars then
+                    thisWidget.parentWidget.BetaTabBars[thisWidget.ID] = nil
+                end
+                thisWidget.ChildContainer:Destroy()
                 thisWidget.Instance:Destroy()
             end,
         } :: Types.WidgetClass)
@@ -13379,6 +13384,9 @@ sources[nodes['widgets/Window']] = function(script)
                 ChildContainer.BorderSizePixel = 0
 
                 ChildContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+                ChildContainer.ScrollingDirection = Enum.ScrollingDirection.Y
+                ChildContainer.ScrollingEnabled = true
+                ChildContainer.Active = true
                 ChildContainer.ScrollBarImageTransparency = Iris._config.ScrollbarGrabTransparency
                 ChildContainer.ScrollBarImageColor3 = Iris._config.ScrollbarGrabColor
                 ChildContainer.CanvasSize = UDim2.fromScale(0, 0)
@@ -13846,6 +13854,9 @@ sources[nodes['widgets/Window']] = function(script)
                 local stateIsUncollapsed = thisWidget.state.isUncollapsed.value
                 local stateIsOpened = thisWidget.state.isOpened.value
                 local stateScrollDistance = thisWidget.state.scrollDistance.value
+                for _, tabBar in thisWidget.BetaTabBars or {} do
+                    tabBar.Instance.Visible = stateIsUncollapsed
+                end
 
                 local Window = thisWidget.Instance :: Frame
                 local ChildContainer = thisWidget.ChildContainer :: ScrollingFrame
@@ -13951,6 +13962,15 @@ sources[nodes['widgets/Window']] = function(script)
                 local Window = thisWidget.Instance :: Frame
                 local WindowButton = Window.WindowButton :: TextButton
                 local Content = WindowButton.Content :: Frame
+                if thisChid.type == "TabBar" then
+                    -- Pin the rail in the window layout; only the tab contents enter its scrolling canvas.
+                    thisWidget.BetaTabBars = thisWidget.BetaTabBars or {}
+                    thisWidget.BetaTabBars[thisChid.ID] = thisChid
+                    thisChid.ChildContainer.Parent = thisWidget.ChildContainer
+                    thisChid.Instance.LayoutOrder = thisWidget.ChildContainer.LayoutOrder - 1
+                    thisChid.Instance.Visible = thisWidget.state.isUncollapsed.value
+                    return Content
+                end
                 if thisChid.type == "MenuBar" then
                     local ChildContainer = thisWidget.ChildContainer :: ScrollingFrame
                     thisChid.Instance.ZIndex = ChildContainer.ZIndex + 1
@@ -14440,5 +14460,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261001002"
+RereBeta.BetaVersion = "20261001003"
 return RereBeta

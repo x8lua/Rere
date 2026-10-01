@@ -8,7 +8,8 @@ local Rere = loadstring(game:HttpGet("https://raw.githubusercontent.com/x8lua/Re
 
 Tabs use Arial, Arial Bold for selection, compact numbered labels, a blue edge,
 and a border around the selected tab. The rail is 21 pixels high with 20 pixel tabs.
-Narrow windows scroll horizontally; arrow buttons appear only when tabs overflow.
+The top-level tab rail stays below the title bar while the content scrolls vertically.
+Narrow windows navigate tabs with arrow buttons; wheel and drag gestures do not scroll the rail.
 Selecting the active tab keeps it open; content switches immediately.
 
 Colors come from the active Rere configuration, including its dark background, blue

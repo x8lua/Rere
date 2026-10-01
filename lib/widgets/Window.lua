@@ -586,6 +586,9 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             ChildContainer.BorderSizePixel = 0
 
             ChildContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+            ChildContainer.ScrollingDirection = Enum.ScrollingDirection.Y
+            ChildContainer.ScrollingEnabled = true
+            ChildContainer.Active = true
             ChildContainer.ScrollBarImageTransparency = Iris._config.ScrollbarGrabTransparency
             ChildContainer.ScrollBarImageColor3 = Iris._config.ScrollbarGrabColor
             ChildContainer.CanvasSize = UDim2.fromScale(0, 0)
@@ -1053,6 +1056,9 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local stateIsUncollapsed = thisWidget.state.isUncollapsed.value
             local stateIsOpened = thisWidget.state.isOpened.value
             local stateScrollDistance = thisWidget.state.scrollDistance.value
+            for _, tabBar in thisWidget.BetaTabBars or {} do
+                tabBar.Instance.Visible = stateIsUncollapsed
+            end
 
             local Window = thisWidget.Instance :: Frame
             local ChildContainer = thisWidget.ChildContainer :: ScrollingFrame
@@ -1158,6 +1164,15 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local Window = thisWidget.Instance :: Frame
             local WindowButton = Window.WindowButton :: TextButton
             local Content = WindowButton.Content :: Frame
+            if thisChid.type == "TabBar" then
+                -- Pin the rail in the window layout; only the tab contents enter its scrolling canvas.
+                thisWidget.BetaTabBars = thisWidget.BetaTabBars or {}
+                thisWidget.BetaTabBars[thisChid.ID] = thisChid
+                thisChid.ChildContainer.Parent = thisWidget.ChildContainer
+                thisChid.Instance.LayoutOrder = thisWidget.ChildContainer.LayoutOrder - 1
+                thisChid.Instance.Visible = thisWidget.state.isUncollapsed.value
+                return Content
+            end
             if thisChid.type == "MenuBar" then
                 local ChildContainer = thisWidget.ChildContainer :: ScrollingFrame
                 thisChid.Instance.ZIndex = ChildContainer.ZIndex + 1

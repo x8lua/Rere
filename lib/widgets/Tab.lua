@@ -70,6 +70,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             Bar.CanvasSize = UDim2.new()
             Bar.AutomaticCanvasSize = Enum.AutomaticSize.X
             Bar.ScrollingDirection = Enum.ScrollingDirection.X
+            Bar.ScrollingEnabled = false
             Bar.ScrollBarThickness = 0
             Bar.ElasticBehavior = Enum.ElasticBehavior.Never
             Bar.ClipsDescendants = true
@@ -179,6 +180,10 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         UpdateState = function(_thisWidget: Types.Tab)
         end,
         Discard = function(thisWidget: Types.TabBar)
+            if thisWidget.parentWidget.BetaTabBars then
+                thisWidget.parentWidget.BetaTabBars[thisWidget.ID] = nil
+            end
+            thisWidget.ChildContainer:Destroy()
             thisWidget.Instance:Destroy()
         end,
     } :: Types.WidgetClass)
