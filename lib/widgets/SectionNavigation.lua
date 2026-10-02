@@ -67,7 +67,7 @@ return function(Iris, widgets, window, tabBar, parent)
     layout.Padding = UDim.new(0, 0)
     layout.Parent = panel
     local padding = Instance.new("UIPadding")
-    padding.PaddingTop = UDim.new(0, 44)
+    padding.PaddingTop = UDim.new(0, 12)
     padding.PaddingBottom = UDim.new(0, 44)
     padding.Parent = panel
     controller.Slot, controller.Panel = slot, panel
@@ -91,7 +91,15 @@ return function(Iris, widgets, window, tabBar, parent)
         local height = 23
         for _, cell in ipairs(controller.buttons) do
             cell.Size = UDim2.new(1, -3, 0, height)
-            cell.Label.Size = UDim2.fromOffset(labelWidth, 14)
+            local textWidth = math.min(cell:GetAttribute("TextWidth"), labelWidth)
+            local angle = math.rad(math.abs(LABEL_ANGLE))
+            local rotatedWidth = textWidth * math.cos(angle) + 14 * math.sin(angle)
+            cell.Label.Size = UDim2.fromOffset(textWidth, 14)
+            cell.Label.Position = UDim2.new(1, -rotatedWidth / 2 - 3, 0.5, 0)
+            if cell.LayoutOrder == 1 then
+                local rotatedHeight = textWidth * math.sin(angle) + 14 * math.cos(angle)
+                padding.PaddingTop = UDim.new(0, math.max(0, math.ceil(rotatedHeight / 2 - height / 2 + 3)))
+            end
         end
     end
     function controller.SetOpen(value, immediate)
@@ -148,6 +156,7 @@ return function(Iris, widgets, window, tabBar, parent)
             longest = math.max(longest, textWidth)
             local cell = Instance.new("TextButton")
             cell.Name = "Section_" .. index
+            cell:SetAttribute("TextWidth", textWidth)
             cell.LayoutOrder = index
             cell.Text = ""
             cell.BackgroundTransparency = 1
