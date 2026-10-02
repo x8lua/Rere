@@ -25,6 +25,13 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             end),
         },
         Discard = function(thisWidget: Types.CollapsingHeader)
+            local tab = rawget(thisWidget, "BetaSectionTab")
+            if tab then
+                local sections = rawget(tab, "BetaSections")
+                if sections then sections[thisWidget.ID] = nil end
+                local navigation = rawget(tab.parentWidget, "BetaNavigation")
+                if navigation then navigation.Refresh() end
+            end
             thisWidget.Instance:Destroy()
             widgets.discardState(thisWidget)
         end,
@@ -353,6 +360,15 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 local TextLabel: TextLabel = Button.TextLabel
 
                 TextLabel.Text = thisWidget.arguments.Text or "Collapsing Header"
+                -- Direct headers are section anchors; nested headers stay within their section.
+                local tab = thisWidget.parentWidget
+                if tab.type == "Tab" then
+                    tab.BetaSections = rawget(tab, "BetaSections") or {}
+                    tab.BetaSections[thisWidget.ID] = thisWidget
+                    thisWidget.BetaSectionTab = tab
+                    local navigation = rawget(tab.parentWidget, "BetaNavigation")
+                    if navigation then navigation.Refresh() end
+                end
             end,
         })
     )

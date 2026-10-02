@@ -190,6 +190,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         UpdateState = function(_thisWidget: Types.Tab)
         end,
         Discard = function(thisWidget: Types.TabBar)
+            local navigation = rawget(thisWidget, "BetaNavigation")
+            if navigation then navigation.Destroy() end
             local tabBars = rawget(thisWidget.parentWidget, "BetaTabBars")
             if tabBars then
                 tabBars[thisWidget.ID] = nil
@@ -409,6 +411,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             else
                 thisWidget.lastUnselectedTick = Iris._cycleTick + 1
             end
+            local navigation = rawget(thisWidget.parentWidget, "BetaNavigation")
+            if navigation then navigation.Refresh() end
         end,
         Discard = function(thisWidget: Types.Tab)
             if thisWidget.state.isOpened.value == true then

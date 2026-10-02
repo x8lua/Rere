@@ -1,4 +1,5 @@
 local Types = require(script.Parent.Parent.Types)
+local SectionNavigation = require(script.Parent.SectionNavigation)
 
 return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
     local function relocateTooltips()
@@ -1058,6 +1059,8 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local stateScrollDistance = thisWidget.state.scrollDistance.value
             for _, tabBar in rawget(thisWidget, "BetaTabBars") or {} do
                 tabBar.Instance.Visible = stateIsUncollapsed
+                local navigation = rawget(tabBar, "BetaNavigation")
+                if navigation and (not stateIsOpened or not stateIsUncollapsed) then navigation.SetOpen(false, true) end
             end
 
             local Window = thisWidget.Instance :: Frame
@@ -1173,6 +1176,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 thisChid.Instance.Size = UDim2.new(1, 0, 0, 22)
                 thisChid.Instance.LayoutOrder = thisWidget.ChildContainer.LayoutOrder - 1
                 thisChid.Instance.Visible = thisWidget.state.isUncollapsed.value
+                thisChid.BetaNavigation = SectionNavigation(Iris, widgets, thisWidget, thisChid, Content)
                 return Content
             end
             if thisChid.type == "MenuBar" then
@@ -1184,6 +1188,10 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             return thisWidget.ChildContainer
         end,
         Discard = function(thisWidget: Types.Window)
+            for _, tabBar in rawget(thisWidget, "BetaTabBars") or {} do
+                local navigation = rawget(tabBar, "BetaNavigation")
+                if navigation then navigation.Destroy() end
+            end
             if focusedWindow == thisWidget then
                 focusedWindow = nil
                 anyFocusedWindow = false
