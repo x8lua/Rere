@@ -1,4 +1,4 @@
--- rere-beta：內容頂端隱藏導覽列。向上滾動或下拉以顯示 45 度 section 捷徑。
+-- rere-beta：內容頂端隱藏導覽列。向上滾動或下拉以顯示 12 度 section 捷徑。
 local Rere = loadstring(game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/rere-beta/src/rere-beta.lua"))()
 local environment = getgenv()
 if environment.RereSectionDemo then environment.RereSectionDemo() end

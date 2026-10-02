@@ -11240,7 +11240,9 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
     -- The clipped slot occupies exactly zero pixels when closed.
     local TweenService = game:GetService("TweenService")
     local UserInputService = game:GetService("UserInputService")
-    local SHOW_HEIGHT = 62
+    local TextService = game:GetService("TextService")
+    local SHOW_HEIGHT = 44
+    local LABEL_ANGLE = 12
     local ANIMATION = TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
     local WHEEL_RELEASE = 0.85 -- Wheel input has no held/released state; allow time to select a section.
 
@@ -11368,9 +11370,12 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
             controller.sections = sections
             panel.CanvasPosition = Vector2.zero
             for index, section in ipairs(sections) do
+                local text = section.arguments.Text or "Section"
+                local textWidth = math.ceil(TextService:GetTextSize(text, 11, Enum.Font.Code, Vector2.new(1000, 14)).X) + 2
+                local cellWidth = math.ceil(textWidth * math.cos(math.rad(LABEL_ANGLE)) + 14 * math.sin(math.rad(LABEL_ANGLE))) + 10
                 local cell = Instance.new("TextButton")
                 cell.Name = "Section_" .. index
-                cell.Size = UDim2.fromOffset(68, SHOW_HEIGHT)
+                cell.Size = UDim2.fromOffset(cellWidth, SHOW_HEIGHT)
                 cell.LayoutOrder = index
                 cell.Text = ""
                 cell.BackgroundTransparency = 1
@@ -11381,25 +11386,20 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
                 label.Name = "Label"
                 label.AnchorPoint = Vector2.new(0.5, 0.5)
                 label.Position = UDim2.fromScale(0.5, 0.5)
-                label.Size = UDim2.fromOffset(72, 12)
+                label.Size = UDim2.fromOffset(textWidth, 14)
                 label.BackgroundTransparency = 1
-                label.FontFace = Iris._config.TextFont
-                label.TextSize = 10
-                label.TextScaled = true
-                local textLimit = Instance.new("UITextSizeConstraint")
-                textLimit.MinTextSize = 8
-                textLimit.MaxTextSize = 10
-                textLimit.Parent = label
+                label.FontFace = Font.fromEnum(Enum.Font.Code)
+                label.TextSize = 11
                 label.TextColor3 = Iris._config.TextColor
                 label.TextTransparency = 0.15
-                label.Text = section.arguments.Text or "Section"
+                label.Text = text
                 label.TextTruncate = Enum.TextTruncate.AtEnd
-                label.Rotation = 45
+                label.Rotation = LABEL_ANGLE
                 label.Parent = cell
                 local edge = Instance.new("Frame")
                 edge.Name = "Edge"
-                edge.Size = UDim2.new(1, -16, 0, 1)
-                edge.Position = UDim2.new(0, 8, 1, -4)
+                edge.Size = UDim2.new(1, -6, 0, 1)
+                edge.Position = UDim2.new(0, 3, 1, -3)
                 edge.BackgroundColor3 = Iris._config.BorderColor
                 edge.BorderSizePixel = 0
                 edge.Parent = cell
@@ -14729,5 +14729,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261002001"
+RereBeta.BetaVersion = "20261002002"
 return RereBeta
