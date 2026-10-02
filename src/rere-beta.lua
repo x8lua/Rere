@@ -11236,9 +11236,12 @@ sources[nodes['widgets/Root']] = function(script)
 end
 sources[nodes['widgets/SectionNavigation']] = function(script)
     local require = requireModule
-    -- Compact fixed section anchors along the content area's right edge.
+    -- Hover over the content right edge to reveal floating diagonal section anchors.
     local TextService = game:GetService("TextService")
-    local LABEL_ANGLE = -12
+    local TweenService = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService")
+    local LABEL_ANGLE = -40
+    local REVEAL = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
     return function(Iris, widgets, window, tabBar, parent)
         local controller = {open = false, destroyed = false, sections = {}, connections = {}, buttons = {}}
@@ -11260,11 +11263,28 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
         slot.AnchorPoint = Vector2.new(1, 0)
         slot.Position = UDim2.fromScale(1, 0)
         slot.Size = UDim2.new(0, 0, 1, 0)
-        slot.BackgroundColor3 = Iris._config.WindowBgColor:Lerp(Color3.new(1, 1, 1), 0.04)
+        slot.BackgroundTransparency = 1
+        slot.ZIndex = 5
         slot.BorderSizePixel = 0
         slot.ClipsDescendants = true
         slot.Visible = false
         slot.Parent = body
+        local group = Instance.new("CanvasGroup")
+        group.Name = "HoverReveal"
+        group.Size = UDim2.fromScale(1, 1)
+        group.BackgroundTransparency = 1
+        group.GroupTransparency = 1
+        group.ZIndex = 2
+        group.Parent = slot
+        local shadow = Instance.new("Frame")
+        shadow.Name = "SoftBlackShadow"
+        shadow.Size = UDim2.fromScale(1, 1)
+        shadow.BackgroundColor3 = Color3.new(0, 0, 0)
+        shadow.BorderSizePixel = 0
+        shadow.Parent = group
+        local gradient = Instance.new("UIGradient")
+        gradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.55, 0.96), NumberSequenceKeypoint.new(1, 0.68)})
+        gradient.Parent = shadow
         local panel = Instance.new("ScrollingFrame")
         panel.Name = "DiagonalSections"
         panel.Size = UDim2.fromScale(1, 1)
@@ -11273,28 +11293,27 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
         panel.CanvasSize = UDim2.new()
         panel.AutomaticCanvasSize = Enum.AutomaticSize.Y
         panel.ScrollingDirection = Enum.ScrollingDirection.Y
-        panel.ScrollBarThickness = 2
+        panel.ScrollBarThickness = 0
         panel.ScrollBarImageColor3 = Iris._config.SliderGrabColor
         panel.ElasticBehavior = Enum.ElasticBehavior.Never
         panel.ClipsDescendants = true
-        panel.Parent = slot
+        panel.ZIndex = 2
+        panel.Parent = group
         local layout = Instance.new("UIListLayout")
         layout.FillDirection = Enum.FillDirection.Vertical
         layout.SortOrder = Enum.SortOrder.LayoutOrder
-        layout.Padding = UDim.new(0, 1)
+        layout.Padding = UDim.new(0, 0)
         layout.Parent = panel
         local padding = Instance.new("UIPadding")
-        padding.PaddingTop = UDim.new(0, 5)
-        padding.PaddingBottom = UDim.new(0, 5)
+        padding.PaddingTop = UDim.new(0, 44)
+        padding.PaddingBottom = UDim.new(0, 44)
         padding.Parent = panel
-        local border = Instance.new("Frame")
-        border.Size = UDim2.new(0, 1, 1, 0)
-        border.BackgroundColor3 = Iris._config.BorderColor
-        border.BackgroundTransparency = 0.4
-        border.BorderSizePixel = 0
-        border.Parent = slot
         controller.Slot, controller.Panel = slot, panel
         local longest = 80
+        local fadeTween, slideTween
+        local function available()
+            return not controller.destroyed and #controller.sections > 0 and window.state.isOpened.value and window.state.isUncollapsed.value
+        end
         local function connect(signal, callback)
             local connection = signal:Connect(callback)
             table.insert(controller.connections, connection)
@@ -11303,21 +11322,37 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
             if controller.destroyed then return end
             local scale = window.Instance.WindowButton.InterfaceScale.Scale
             local available = body.AbsoluteSize.X / scale
-            local width = controller.open and math.min(longest + 12, math.max(72, available * 0.32), 152) or 0
+            local width = math.min(longest + 12, math.max(96, available * 0.4), 152)
             slot.Size = UDim2.new(0, width, 1, 0)
-            scroll.Size = UDim2.new(1, -width, 1, 0)
+            scroll.Size = UDim2.fromScale(1, 1)
             local labelWidth = math.max(20, width - 12)
-            local height = math.ceil(labelWidth * math.sin(math.rad(math.abs(LABEL_ANGLE))) + 14) + 4
+            local height = 23
             for _, cell in ipairs(controller.buttons) do
                 cell.Size = UDim2.new(1, -3, 0, height)
                 cell.Label.Size = UDim2.fromOffset(labelWidth, 14)
             end
         end
-        function controller.SetOpen(value)
+        function controller.SetOpen(value, immediate)
             if controller.destroyed then return end
-            controller.open = value and #controller.sections > 0 and window.state.isOpened.value and window.state.isUncollapsed.value
-            slot.Visible = controller.open
+            value = value and available()
+            if value == controller.open and not immediate then return end
+            controller.open = value
+            if fadeTween then fadeTween:Cancel() end
+            if slideTween then slideTween:Cancel() end
             resize()
+            if immediate then
+                group.GroupTransparency = value and 0 or 1
+                group.Position = UDim2.fromOffset(value and 0 or 10, 0)
+                slot.Visible = value
+                return
+            end
+            slot.Visible = true
+            fadeTween = TweenService:Create(group, REVEAL, {GroupTransparency = value and 0 or 1})
+            slideTween = TweenService:Create(group, REVEAL, {Position = UDim2.fromOffset(value and 0 or 10, 0)})
+            fadeTween.Completed:Once(function(state)
+                if state == Enum.PlaybackState.Completed and not controller.destroyed and not controller.open then slot.Visible = false end
+            end)
+            fadeTween:Play(); slideTween:Play()
         end
         function controller.Jump(section)
             if controller.destroyed or not section.Instance.Parent then return end
@@ -11369,18 +11404,44 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
                 label.Text = text
                 label.TextTruncate = Enum.TextTruncate.AtEnd
                 label.Rotation = LABEL_ANGLE
+                local outline = Instance.new("UIStroke")
+                outline.Color = Color3.new(0, 0, 0)
+                outline.Thickness = 1.5
+                outline.Transparency = 0.4
+                outline.Parent = label
                 label.Parent = cell
-                cell.MouseEnter:Connect(function() label.TextTransparency = 0; cell.BackgroundTransparency = 0; cell.BackgroundColor3 = Iris._config.TabHoveredColor end)
-                cell.MouseLeave:Connect(function() label.TextTransparency = 0.15; cell.BackgroundTransparency = 1 end)
+                cell.MouseEnter:Connect(function() label.TextTransparency = 0; label.TextColor3 = Iris._config.SliderGrabActiveColor end)
+                cell.MouseLeave:Connect(function() label.TextTransparency = 0.15; label.TextColor3 = Iris._config.TextColor end)
                 widgets.applyButtonClick(cell, function() controller.Jump(section) end)
                 table.insert(controller.buttons, cell)
             end
-            controller.SetOpen(true)
+            resize()
+            controller.SetOpen(false, true)
         end
         connect(body:GetPropertyChangedSignal("AbsoluteSize"), resize)
+        connect(UserInputService.InputChanged, function(input)
+            if input.UserInputType ~= Enum.UserInputType.MouseMovement or not available() then return end
+            local pointer = widgets.getMouseLocation()
+            local origin = body.AbsolutePosition - widgets.GuiOffset
+            local size = body.AbsoluteSize
+            local width = controller.open and slot.AbsoluteSize.X or 22
+            controller.SetOpen(pointer.X >= origin.X + size.X - width and pointer.X <= origin.X + size.X
+                and pointer.Y >= origin.Y and pointer.Y <= origin.Y + size.Y)
+        end)
+        connect(UserInputService.InputBegan, function(input)
+            if input.UserInputType ~= Enum.UserInputType.Touch or not available() then return end
+            local pointer = Vector2.new(input.Position.X, input.Position.Y) - widgets.GuiOffset
+            local origin = body.AbsolutePosition - widgets.GuiOffset
+            local size = body.AbsoluteSize
+            if pointer.X >= origin.X + size.X - 22 and pointer.X <= origin.X + size.X and pointer.Y >= origin.Y and pointer.Y <= origin.Y + size.Y then
+                controller.SetOpen(not controller.open)
+            elseif controller.open and pointer.X < origin.X + size.X - slot.AbsoluteSize.X then controller.SetOpen(false) end
+        end)
         function controller.Destroy(alreadyDestroying)
             if controller.destroyed then return end
             controller.destroyed = true
+            if fadeTween then fadeTween:Cancel() end
+            if slideTween then slideTween:Cancel() end
             for _, connection in ipairs(controller.connections) do connection:Disconnect() end
             table.clear(controller.connections)
             if not alreadyDestroying then
@@ -14054,7 +14115,7 @@ sources[nodes['widgets/Window']] = function(script)
                 for _, tabBar in rawget(thisWidget, "BetaTabBars") or {} do
                     tabBar.Instance.Visible = stateIsUncollapsed
                     local navigation = rawget(tabBar, "BetaNavigation")
-                    if navigation then navigation.SetOpen(stateIsOpened and stateIsUncollapsed) end
+                    if navigation and (not stateIsOpened or not stateIsUncollapsed) then navigation.SetOpen(false, true) end
                 end
 
                 local Window = thisWidget.Instance :: Frame
@@ -14666,5 +14727,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261002003"
+RereBeta.BetaVersion = "20261002004"
 return RereBeta

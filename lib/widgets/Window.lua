@@ -1060,7 +1060,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             for _, tabBar in rawget(thisWidget, "BetaTabBars") or {} do
                 tabBar.Instance.Visible = stateIsUncollapsed
                 local navigation = rawget(tabBar, "BetaNavigation")
-                if navigation then navigation.SetOpen(stateIsOpened and stateIsUncollapsed) end
+                if navigation and (not stateIsOpened or not stateIsUncollapsed) then navigation.SetOpen(false, true) end
             end
 
             local Window = thisWidget.Instance :: Frame

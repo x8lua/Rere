@@ -1,4 +1,4 @@
--- rere-beta：右側固定 section 捷徑，Arial Bold 與 12 度傾斜。
+-- rere-beta：右側 hover 呼出 section 捷徑，透明背景、Arial Bold 與 40 度傾斜。
 local Rere = loadstring(game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/rere-beta/src/rere-beta.lua"))()
 local environment = getgenv()
 if environment.RereSectionDemo then environment.RereSectionDemo() end

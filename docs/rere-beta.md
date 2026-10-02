@@ -19,10 +19,10 @@ Edit `lib/widgets/Tab.lua`, then run `node tools/build-executor.mjs` to generate
 `src/Rere.lua` and `src/rere-beta.lua`. The source LarpKuran copy remains a separate local
 artifact.
 
-## 右側 section 導覽列
+## 右側懸浮 section 導覽
 
-`BetaVersion = 20261002003`：目前分頁直屬的 `CollapsingHeader` 自動成為 section 捷徑，無須重複維護標籤。範例位於 `examples/section-navigation.luau`。
+`BetaVersion = 20261002004`：目前分頁直屬的 `CollapsingHeader` 自動成為 section 捷徑。
 
-導覽列固定在主內容右側，垂直緊密排列，使用 Arial Bold 和 -12 度傾斜。它有自己的寬度，不覆蓋內容；窄視窗限制寬度，過長文字截斷。sections 超過高度時導覽列可獨立垂直捲動。點選直接跳轉並展開目標 section。換分頁時自動更新標籤；沒有 sections 時不佔寬度。隱藏／收合視窗和 Shutdown 會隱藏或清理導覽。
+主內容保持完整寬度，導覽不佔版面。滑鼠移入內容右側 22 pixels 呼出，移離懸浮區收起；手機點右側邊緣可切換。使用 0.16 秒滑入／淡出、透明背景、淡黑漸層陰影。Arial Bold 標籤旋轉 -40 度，以 23 UI pixels 節距緊密排列；點擊直接跳轉並展開 section。超過高度時可獨立捲動。
 
-Real MCP 已確認 Larpgaku 右側位置、字型、傾斜與 UI 無錯；手機真機尚未驗證。
+換分頁、隱藏／收合視窗會收起，Shutdown 清理輸入連線與 tween。Real MCP 已確認主內容展開前後皆為完整寬度、字型和角度及 UI 無錯；手機真機未驗證。
