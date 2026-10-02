@@ -66,7 +66,7 @@ for (const file of files.sort()) {
   lines.push("end");
 }
 
-lines.push("local RereBeta = requireModule(nodes['Iris'])", 'RereBeta.BetaVersion = "20261002002"', "return RereBeta");
+lines.push("local RereBeta = requireModule(nodes['Iris'])", 'RereBeta.BetaVersion = "20261002003"', "return RereBeta");
 fs.mkdirSync(path.join(repo, "src"), { recursive: true });
 fs.writeFileSync(path.join(repo, "src", "Rere.lua"), lines.join("\n") + "\n");
 fs.writeFileSync(path.join(repo, "src", "rere-beta.lua"), lines.join("\n") + "\n");

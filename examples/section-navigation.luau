@@ -1,4 +1,4 @@
--- rere-beta：內容頂端隱藏導覽列。向上滾動或下拉以顯示 12 度 section 捷徑。
+-- rere-beta：右側固定 section 捷徑，Arial Bold 與 12 度傾斜。
 local Rere = loadstring(game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/rere-beta/src/rere-beta.lua"))()
 local environment = getgenv()
 if environment.RereSectionDemo then environment.RereSectionDemo() end

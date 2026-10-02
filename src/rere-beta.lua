@@ -11236,122 +11236,98 @@ sources[nodes['widgets/Root']] = function(script)
 end
 sources[nodes['widgets/SectionNavigation']] = function(script)
     local require = requireModule
-    -- Pull down at the top of a window to jump between the active tab's sections.
-    -- The clipped slot occupies exactly zero pixels when closed.
-    local TweenService = game:GetService("TweenService")
-    local UserInputService = game:GetService("UserInputService")
+    -- Compact fixed section anchors along the content area's right edge.
     local TextService = game:GetService("TextService")
-    local SHOW_HEIGHT = 44
-    local LABEL_ANGLE = 12
-    local ANIMATION = TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    local WHEEL_RELEASE = 0.85 -- Wheel input has no held/released state; allow time to select a section.
+    local LABEL_ANGLE = -12
 
     return function(Iris, widgets, window, tabBar, parent)
         local controller = {open = false, destroyed = false, sections = {}, connections = {}, buttons = {}}
         local scroll = window.ChildContainer
+        local body = Instance.new("Frame")
+        body.Name = "RereContentBody"
+        body.Size = scroll.Size
+        body.LayoutOrder = scroll.LayoutOrder
+        body.BackgroundTransparency = 1
+        body.BorderSizePixel = 0
+        body.ClipsDescendants = true
+        local flex = scroll:FindFirstChildWhichIsA("UIFlexItem")
+        if flex then flex.Parent = body end
+        body.Parent = parent
+        scroll.Parent = body
+        scroll.Position = UDim2.fromOffset(0, 0)
         local slot = Instance.new("Frame")
         slot.Name = "RereSectionNavigation"
-        slot.Size = UDim2.new(1, 0, 0, 0)
-        slot.BackgroundTransparency = 1
+        slot.AnchorPoint = Vector2.new(1, 0)
+        slot.Position = UDim2.fromScale(1, 0)
+        slot.Size = UDim2.new(0, 0, 1, 0)
+        slot.BackgroundColor3 = Iris._config.WindowBgColor:Lerp(Color3.new(1, 1, 1), 0.04)
         slot.BorderSizePixel = 0
         slot.ClipsDescendants = true
-        slot.LayoutOrder = -1
         slot.Visible = false
-        slot.Parent = scroll
+        slot.Parent = body
         local panel = Instance.new("ScrollingFrame")
         panel.Name = "DiagonalSections"
-        panel.Position = UDim2.fromOffset(0, -SHOW_HEIGHT)
-        panel.Size = UDim2.new(1, 0, 0, SHOW_HEIGHT)
-        panel.BackgroundColor3 = Iris._config.WindowBgColor:Lerp(Color3.new(1, 1, 1), 0.06)
+        panel.Size = UDim2.fromScale(1, 1)
+        panel.BackgroundTransparency = 1
         panel.BorderSizePixel = 0
         panel.CanvasSize = UDim2.new()
-        panel.AutomaticCanvasSize = Enum.AutomaticSize.X
-        panel.ScrollingDirection = Enum.ScrollingDirection.X
+        panel.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        panel.ScrollingDirection = Enum.ScrollingDirection.Y
         panel.ScrollBarThickness = 2
         panel.ScrollBarImageColor3 = Iris._config.SliderGrabColor
         panel.ElasticBehavior = Enum.ElasticBehavior.Never
         panel.ClipsDescendants = true
         panel.Parent = slot
         local layout = Instance.new("UIListLayout")
-        layout.FillDirection = Enum.FillDirection.Horizontal
+        layout.FillDirection = Enum.FillDirection.Vertical
         layout.SortOrder = Enum.SortOrder.LayoutOrder
-        layout.Padding = UDim.new(0, 0)
+        layout.Padding = UDim.new(0, 1)
         layout.Parent = panel
         local padding = Instance.new("UIPadding")
-        padding.PaddingLeft = UDim.new(0, 6)
-        padding.PaddingRight = UDim.new(0, 6)
+        padding.PaddingTop = UDim.new(0, 5)
+        padding.PaddingBottom = UDim.new(0, 5)
         padding.Parent = panel
+        local border = Instance.new("Frame")
+        border.Size = UDim2.new(0, 1, 1, 0)
+        border.BackgroundColor3 = Iris._config.BorderColor
+        border.BackgroundTransparency = 0.4
+        border.BorderSizePixel = 0
+        border.Parent = slot
         controller.Slot, controller.Panel = slot, panel
-        local slotTween, panelTween, hideTask, touch, touchY, touchAtTop, jumpAnchor
-
+        local longest = 80
         local function connect(signal, callback)
             local connection = signal:Connect(callback)
             table.insert(controller.connections, connection)
-            return connection
         end
-        local function inside(gui, position)
-            local p, s = gui.AbsolutePosition - widgets.GuiOffset, gui.AbsoluteSize
-            return position.X >= p.X and position.X <= p.X + s.X and position.Y >= p.Y and position.Y <= p.Y + s.Y
-        end
-        local function visible()
-            return not controller.destroyed and window.state.isOpened.value and window.state.isUncollapsed.value
-                and tabBar.Instance.Visible and #controller.sections > 0
-        end
-        local function cancelHide()
-            if hideTask then pcall(task.cancel, hideTask); hideTask = nil end
-        end
-        function controller.SetOpen(value, immediate)
+        local function resize()
             if controller.destroyed then return end
-            value = value and visible()
-            if value == controller.open and not immediate then return end
-            controller.open = value
-            if slotTween then slotTween:Cancel() end
-            if panelTween then panelTween:Cancel() end
-            if immediate then
-                slot.Size = UDim2.new(1, 0, 0, value and SHOW_HEIGHT or 0)
-                panel.Position = UDim2.fromOffset(0, value and 0 or -SHOW_HEIGHT)
-                slot.Visible = value
-                return
+            local scale = window.Instance.WindowButton.InterfaceScale.Scale
+            local available = body.AbsoluteSize.X / scale
+            local width = controller.open and math.min(longest + 12, math.max(72, available * 0.32), 152) or 0
+            slot.Size = UDim2.new(0, width, 1, 0)
+            scroll.Size = UDim2.new(1, -width, 1, 0)
+            local labelWidth = math.max(20, width - 12)
+            local height = math.ceil(labelWidth * math.sin(math.rad(math.abs(LABEL_ANGLE))) + 14) + 4
+            for _, cell in ipairs(controller.buttons) do
+                cell.Size = UDim2.new(1, -3, 0, height)
+                cell.Label.Size = UDim2.fromOffset(labelWidth, 14)
             end
-            slot.Visible = true
-            slotTween = TweenService:Create(slot, ANIMATION, {Size = UDim2.new(1, 0, 0, value and SHOW_HEIGHT or 0)})
-            panelTween = TweenService:Create(panel, ANIMATION, {Position = UDim2.fromOffset(0, value and 0 or -SHOW_HEIGHT)})
-            slotTween.Completed:Once(function(state)
-                if state == Enum.PlaybackState.Completed and not controller.destroyed and not controller.open then
-                    slot.Visible = false
-                    task.defer(function()
-                        local section = jumpAnchor
-                        if controller.destroyed or not section or not section.Instance.Parent then return end
-                        local offset = section.Instance.AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y
-                        scroll.CanvasPosition = Vector2.new(0, math.clamp(offset, 0, math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteWindowSize.Y)))
-                        window.state.scrollDistance.value = scroll.CanvasPosition.Y
-                        jumpAnchor = nil
-                    end)
-                end
-            end)
-            slotTween:Play(); panelTween:Play()
         end
-        local function releaseLater()
-            cancelHide()
-            hideTask = task.delay(WHEEL_RELEASE, function()
-                hideTask = nil
-                if not controller.destroyed and not touch and not inside(slot, widgets.getMouseLocation()) then controller.SetOpen(false) end
-            end)
+        function controller.SetOpen(value)
+            if controller.destroyed then return end
+            controller.open = value and #controller.sections > 0 and window.state.isOpened.value and window.state.isUncollapsed.value
+            slot.Visible = controller.open
+            resize()
         end
         function controller.Jump(section)
             if controller.destroyed or not section.Instance.Parent then return end
             section.state.isUncollapsed:set(true)
-            -- Keep the target anchored while the navigation slot smoothly collapses.
-            jumpAnchor = section
-            cancelHide(); controller.SetOpen(false)
             task.defer(function()
                 if controller.destroyed or not section.Instance.Parent then return end
                 local offset = section.Instance.AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y
-                local maximum = math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteWindowSize.Y)
-                scroll.CanvasPosition = Vector2.new(0, math.clamp(offset, 0, maximum))
+                scroll.CanvasPosition = Vector2.new(0, math.clamp(offset, 0, math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteWindowSize.Y)))
                 window.state.scrollDistance.value = scroll.CanvasPosition.Y
             end)
-            window.state.scrollDistance.value = scroll.CanvasPosition.Y
         end
         function controller.Refresh()
             if controller.destroyed then return end
@@ -11364,18 +11340,17 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
             for _, section in ipairs(sections) do signature ..= "|" .. section.ID .. ":" .. tostring(section.arguments.Text) end
             if controller.signature == signature then return end
             controller.signature = signature
-            controller.SetOpen(false, true); cancelHide()
             for _, button in ipairs(controller.buttons) do button:Destroy() end
             table.clear(controller.buttons)
             controller.sections = sections
             panel.CanvasPosition = Vector2.zero
+            longest = 80
             for index, section in ipairs(sections) do
                 local text = section.arguments.Text or "Section"
-                local textWidth = math.ceil(TextService:GetTextSize(text, 11, Enum.Font.Code, Vector2.new(1000, 14)).X) + 2
-                local cellWidth = math.ceil(textWidth * math.cos(math.rad(LABEL_ANGLE)) + 14 * math.sin(math.rad(LABEL_ANGLE))) + 10
+                local textWidth = math.ceil(TextService:GetTextSize(text, 11, Enum.Font.ArialBold, Vector2.new(1000, 14)).X) + 2
+                longest = math.max(longest, textWidth)
                 local cell = Instance.new("TextButton")
                 cell.Name = "Section_" .. index
-                cell.Size = UDim2.fromOffset(cellWidth, SHOW_HEIGHT)
                 cell.LayoutOrder = index
                 cell.Text = ""
                 cell.BackgroundTransparency = 1
@@ -11386,9 +11361,8 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
                 label.Name = "Label"
                 label.AnchorPoint = Vector2.new(0.5, 0.5)
                 label.Position = UDim2.fromScale(0.5, 0.5)
-                label.Size = UDim2.fromOffset(textWidth, 14)
                 label.BackgroundTransparency = 1
-                label.FontFace = Font.fromEnum(Enum.Font.Code)
+                label.FontFace = Font.fromEnum(Enum.Font.ArialBold)
                 label.TextSize = 11
                 label.TextColor3 = Iris._config.TextColor
                 label.TextTransparency = 0.15
@@ -11396,67 +11370,30 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
                 label.TextTruncate = Enum.TextTruncate.AtEnd
                 label.Rotation = LABEL_ANGLE
                 label.Parent = cell
-                local edge = Instance.new("Frame")
-                edge.Name = "Edge"
-                edge.Size = UDim2.new(1, -6, 0, 1)
-                edge.Position = UDim2.new(0, 3, 1, -3)
-                edge.BackgroundColor3 = Iris._config.BorderColor
-                edge.BorderSizePixel = 0
-                edge.Parent = cell
-                cell.MouseEnter:Connect(function() label.TextTransparency = 0; edge.BackgroundColor3 = Iris._config.SliderGrabColor end)
-                cell.MouseLeave:Connect(function() label.TextTransparency = 0.15; edge.BackgroundColor3 = Iris._config.BorderColor end)
+                cell.MouseEnter:Connect(function() label.TextTransparency = 0; cell.BackgroundTransparency = 0; cell.BackgroundColor3 = Iris._config.TabHoveredColor end)
+                cell.MouseLeave:Connect(function() label.TextTransparency = 0.15; cell.BackgroundTransparency = 1 end)
                 widgets.applyButtonClick(cell, function() controller.Jump(section) end)
                 table.insert(controller.buttons, cell)
             end
+            controller.SetOpen(true)
         end
-        connect(UserInputService.InputChanged, function(input)
-            if not visible() then return end
-            if input.UserInputType == Enum.UserInputType.MouseWheel then
-                local pointer = widgets.getMouseLocation()
-                if inside(scroll, pointer) or (controller.open and inside(slot, pointer)) then
-                    if input.Position.Z < 0 then cancelHide(); controller.SetOpen(false)
-                    elseif input.Position.Z > 0 and scroll.CanvasPosition.Y <= 1 then controller.SetOpen(true); releaseLater() end
-                end
-            elseif input == touch then
-                local delta = input.Position.Y - touchY
-                if delta < -6 then controller.SetOpen(false)
-                elseif touchAtTop and delta >= 22 then controller.SetOpen(true) end
-            end
-        end)
-        connect(UserInputService.InputBegan, function(input)
-            if input.UserInputType ~= Enum.UserInputType.Touch or not visible() then return end
-            local position = Vector2.new(input.Position.X, input.Position.Y) - widgets.GuiOffset
-            if inside(scroll, position) then touch = input; touchY = input.Position.Y; touchAtTop = scroll.CanvasPosition.Y <= 1; cancelHide() end
-        end)
-        connect(UserInputService.InputEnded, function(input)
-            if input == touch then touch = nil; controller.SetOpen(false) end
-        end)
-        connect(slot.MouseEnter, cancelHide)
-        connect(slot.MouseLeave, releaseLater)
-        connect(scroll:GetPropertyChangedSignal("CanvasPosition"), function()
-            if controller.open and scroll.CanvasPosition.Y > 1 then cancelHide(); controller.SetOpen(false) end
-        end)
-        connect(slot:GetPropertyChangedSignal("AbsoluteSize"), function()
-            local section = jumpAnchor
-            if not section or controller.destroyed or not section.Instance.Parent then return end
-            task.defer(function()
-                if controller.destroyed or jumpAnchor ~= section or not section.Instance.Parent then return end
-                local offset = section.Instance.AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y
-                scroll.CanvasPosition = Vector2.new(0, math.clamp(offset, 0, math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteWindowSize.Y)))
-                window.state.scrollDistance.value = scroll.CanvasPosition.Y
-            end)
-        end)
+        connect(body:GetPropertyChangedSignal("AbsoluteSize"), resize)
         function controller.Destroy(alreadyDestroying)
             if controller.destroyed then return end
-            controller.destroyed = true; cancelHide()
-            if slotTween then slotTween:Cancel() end
-            if panelTween then panelTween:Cancel() end
+            controller.destroyed = true
             for _, connection in ipairs(controller.connections) do connection:Disconnect() end
             table.clear(controller.connections)
-            if not alreadyDestroying then slot:Destroy() end
+            if not alreadyDestroying then
+                if scroll.Parent == body then
+                    scroll.Parent = parent
+                    scroll.Size = body.Size
+                    local ownedFlex = body:FindFirstChildWhichIsA("UIFlexItem")
+                    if ownedFlex then ownedFlex.Parent = scroll end
+                end
+                body:Destroy()
+            end
         end
-        -- Iris.Shutdown destroys the root directly, without calling every widget's Discard.
-        connect(slot.Destroying, function() controller.Destroy(true) end)
+        connect(body.Destroying, function() controller.Destroy(true) end)
         return controller
     end
 
@@ -14117,7 +14054,7 @@ sources[nodes['widgets/Window']] = function(script)
                 for _, tabBar in rawget(thisWidget, "BetaTabBars") or {} do
                     tabBar.Instance.Visible = stateIsUncollapsed
                     local navigation = rawget(tabBar, "BetaNavigation")
-                    if navigation and (not stateIsOpened or not stateIsUncollapsed) then navigation.SetOpen(false, true) end
+                    if navigation then navigation.SetOpen(stateIsOpened and stateIsUncollapsed) end
                 end
 
                 local Window = thisWidget.Instance :: Frame
@@ -14729,5 +14666,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261002002"
+RereBeta.BetaVersion = "20261002003"
 return RereBeta
