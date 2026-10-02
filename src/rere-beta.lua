@@ -11333,10 +11333,9 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
                 local angle = math.rad(math.abs(LABEL_ANGLE))
                 local rotatedWidth = textWidth * math.cos(angle) + 14 * math.sin(angle)
                 cell.Label.Size = UDim2.fromOffset(textWidth, 14)
-                cell.Label.Position = UDim2.new(1, -rotatedWidth / 2 - 3, 0.5, 0)
+                cell.Label.Position = UDim2.new(1, -rotatedWidth / 2 - 3, 0, 8 + textWidth * math.sin(angle) / 2)
                 if cell.LayoutOrder == 1 then
-                    local rotatedHeight = textWidth * math.sin(angle) + 14 * math.cos(angle)
-                    padding.PaddingTop = UDim.new(0, math.max(0, math.ceil(rotatedHeight / 2 - height / 2 + 3)))
+                    padding.PaddingTop = UDim.new(0, 3)
                 end
             end
         end
