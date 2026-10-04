@@ -11750,6 +11750,7 @@ sources[nodes['widgets/Tab']] = function(script)
         local TextService = game:GetService("TextService")
         local function styleTab(widget, animate)
             local tab = widget.Instance
+            if rawget(widget, "BetaDiscarded") or not tab or not tab:FindFirstChild("TextLabel") then return end
             local active = widget.state and widget.state.isOpened and widget.state.isOpened.value == true
             local config = Iris._config
             Motion.Play(widget, "tabColor", tab, {
@@ -11921,14 +11922,20 @@ sources[nodes['widgets/Tab']] = function(script)
                 return thisWidget.Bar
             end,
             ChildDiscarded = function(thisWidget: Types.TabBar, thisChild: Types.Tab)
-                local Index = thisChild.Index
+                local Index = table.find(thisWidget.Tabs, thisChild)
+                if not Index then return end
                 table.remove(thisWidget.Tabs, Index)
 
                 for i = Index, #thisWidget.Tabs do
                     thisWidget.Tabs[i].Index = i
                 end
 
-                closeTab(thisWidget, Index)
+                if not rawget(thisWidget, "BetaDiscarded") and thisChild.state.isOpened.value then
+                    local nextTab = thisWidget.Tabs[math.min(Index, #thisWidget.Tabs)]
+                    if nextTab and not rawget(nextTab, "BetaDiscarded") and nextTab.Instance.Parent then
+                        openTab(thisWidget, nextTab.Index)
+                    end
+                end
             end,
             GenerateState = function(thisWidget: Types.Tab)
                 if thisWidget.state.index == nil then
@@ -11938,6 +11945,11 @@ sources[nodes['widgets/Tab']] = function(script)
             UpdateState = function(_thisWidget: Types.Tab)
             end,
             Discard = function(thisWidget: Types.TabBar)
+                thisWidget.BetaDiscarded = true
+                for _, tab in thisWidget.Tabs do
+                    tab.BetaDiscarded = true
+                    Motion.Clear(tab)
+                end
                 local navigation = rawget(thisWidget, "BetaNavigation")
                 if navigation then navigation.Destroy() end
                 local tabBars = rawget(thisWidget.parentWidget, "BetaTabBars")
@@ -12148,6 +12160,7 @@ sources[nodes['widgets/Tab']] = function(script)
             UpdateState = function(thisWidget: Types.Tab)
                 local Tab = thisWidget.Instance :: TextButton
                 local Container = thisWidget.ChildContainer :: Frame
+                if rawget(thisWidget, "BetaDiscarded") or not Tab:FindFirstChild("TextLabel") or not Container.Parent then return end
 
                 styleTab(thisWidget, true)
                 Container.Visible = thisWidget.state.isOpened.value == true
@@ -12176,9 +12189,7 @@ sources[nodes['widgets/Tab']] = function(script)
                 if navigation then navigation.Refresh() end
             end,
             Discard = function(thisWidget: Types.Tab)
-                if thisWidget.state.isOpened.value == true then
-                    closeTab(thisWidget.parentWidget, thisWidget.Index)
-                end
+                thisWidget.BetaDiscarded = true
                 Motion.Clear(thisWidget)
                 
                 thisWidget.Instance:Destroy()
