@@ -13112,7 +13112,49 @@ sources[nodes['widgets/Tree']] = function(script)
     local Motion = require(script.Parent.BetaMotion)
 
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
-        local RunService = game:GetService("RunService")
+        local function animateOpening(widget, height)
+            local container = widget.ChildContainer
+            local generation = widget.BetaMotionGeneration
+            if not widget.BetaOpening or not container.Parent then return end
+            if math.abs((rawget(widget, "BetaSectionTargetHeight") or -1) - height) < 0.5 then return end
+            widget.BetaSectionTargetHeight = height
+            Motion.Play(widget, "section", container, {Size = UDim2.new(1, 0, 0, height)}, 0.18, true, function()
+                if widget.BetaMotionGeneration ~= generation or not container.Parent then return end
+                -- A cached height can start immediately; finish only once new children have laid out.
+                if container.UIListLayout.AbsoluteContentSize.Y <= 0 then
+                    widget.BetaSectionTargetHeight = nil
+                    return
+                end
+                local measured = Motion.ContentHeight(container)
+                if math.abs(measured - height) >= 0.5 then
+                    animateOpening(widget, measured)
+                    return
+                end
+                widget.BetaExpandedHeight = measured
+                widget.BetaOpening = false
+                container.AutomaticSize = Enum.AutomaticSize.Y
+                container.Size = UDim2.fromScale(1, 0)
+            end)
+        end
+        local function queueSectionLayout(widget)
+            if rawget(widget, "BetaLayoutQueued") then return end
+            widget.BetaLayoutQueued = true
+            task.defer(function()
+                widget.BetaLayoutQueued = false
+                local container = widget.ChildContainer
+                local states = rawget(widget, "state")
+                if not container.Parent or not states or not states.isUncollapsed.value then return end
+                if container.UIListLayout.AbsoluteContentSize.Y <= 0 then return end
+                local height = Motion.ContentHeight(container)
+                widget.BetaExpandedHeight = height
+                if rawget(widget, "BetaOpening") then animateOpening(widget, height) end
+            end)
+        end
+        local function watchSectionLayout(widget)
+            widget.BetaLayoutConnection = widget.ChildContainer.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                queueSectionLayout(widget)
+            end)
+        end
 
         local abstractTree = {
             hasState = true,
@@ -13135,6 +13177,8 @@ sources[nodes['widgets/Tree']] = function(script)
                 end),
             },
             Discard = function(thisWidget: Types.CollapsingHeader)
+                local layoutConnection = rawget(thisWidget, "BetaLayoutConnection")
+                if layoutConnection then layoutConnection:Disconnect() end
                 Motion.Clear(thisWidget)
                 local tab = rawget(thisWidget, "BetaSectionTab")
                 if tab then
@@ -13150,6 +13194,7 @@ sources[nodes['widgets/Tree']] = function(script)
                 local ChildContainer = thisWidget.ChildContainer :: Frame
 
                 if thisWidget.state.isUncollapsed.value then ChildContainer.Visible = true end
+                queueSectionLayout(thisWidget)
 
                 return ChildContainer
             end,
@@ -13181,10 +13226,12 @@ sources[nodes['widgets/Tree']] = function(script)
                 thisWidget.BetaWasUncollapsed = isUncollapsed
                 if previous == isUncollapsed then return end
                 Motion.Cancel(thisWidget, "section")
+                thisWidget.BetaOpening = false
+                thisWidget.BetaSectionTargetHeight = nil
                 thisWidget.BetaMotionGeneration = (rawget(thisWidget, "BetaMotionGeneration") or 0) + 1
                 local generation = thisWidget.BetaMotionGeneration
                 local enabled = Iris._config.BetaAnimations ~= false
-                if not enabled then
+                if not enabled or previous == nil then
                     ChildContainer.Visible = isUncollapsed
                     ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
                     ChildContainer.Size = UDim2.fromScale(1, 0)
@@ -13192,24 +13239,22 @@ sources[nodes['widgets/Tree']] = function(script)
                 end
                 -- Freeze the current height while the immediate-mode render adds/removes children.
                 local height = ChildContainer.Size.Y.Offset
-                if ChildContainer.AutomaticSize == Enum.AutomaticSize.Y then height = Motion.ContentHeight(ChildContainer) end
+                if ChildContainer.AutomaticSize == Enum.AutomaticSize.Y then
+                    height = Motion.ContentHeight(ChildContainer)
+                    if previous and ChildContainer.UIListLayout.AbsoluteContentSize.Y > 0 then
+                        thisWidget.BetaExpandedHeight = height
+                    end
+                end
                 ChildContainer.AutomaticSize = Enum.AutomaticSize.None
-                ChildContainer.Size = UDim2.new(1, 0, 0, previous == nil and 0 or height)
+                ChildContainer.Size = UDim2.new(1, 0, 0, height)
                 ChildContainer.Visible = true
                 if isUncollapsed then
+                    thisWidget.BetaOpening = true
                     Button.TextLabel.TextTransparency = 0.45
                     Motion.Play(thisWidget, "sectionTitle", Button.TextLabel, {TextTransparency = Iris._config.TextTransparency}, 0.2, true)
-                    task.defer(function()
-                        -- Newly opened sections only receive children on the next render cycle.
-                        RunService.Heartbeat:Wait()
-                        if thisWidget.BetaMotionGeneration ~= generation or not ChildContainer.Parent then return end
-                        local targetHeight = Motion.ContentHeight(ChildContainer)
-                        Motion.Play(thisWidget, "section", ChildContainer, {Size = UDim2.new(1, 0, 0, targetHeight)}, 0.2, true, function()
-                            if thisWidget.BetaMotionGeneration ~= generation or not ChildContainer.Parent then return end
-                            ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
-                            ChildContainer.Size = UDim2.fromScale(1, 0)
-                        end)
-                    end)
+                    local cachedHeight = rawget(thisWidget, "BetaExpandedHeight")
+                    if cachedHeight and cachedHeight > 0 then animateOpening(thisWidget, cachedHeight) end
+                    queueSectionLayout(thisWidget)
                 else
                     Motion.Cancel(thisWidget, "sectionTitle")
                     Button.TextLabel.TextTransparency = Iris._config.TextTransparency
@@ -13341,6 +13386,7 @@ sources[nodes['widgets/Tree']] = function(script)
                     end)
 
                     thisWidget.ChildContainer = ChildContainer
+                    watchSectionLayout(thisWidget)
                     return Tree
                 end,
                 Update = function(thisWidget: Types.Tree)
@@ -13485,6 +13531,7 @@ sources[nodes['widgets/Tree']] = function(script)
                     end)
 
                     thisWidget.ChildContainer = ChildContainer
+                    watchSectionLayout(thisWidget)
                     return CollapsingHeader
                 end,
                 Update = function(thisWidget: Types.CollapsingHeader)
@@ -15187,5 +15234,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261004003"
+RereBeta.BetaVersion = "20261004004"
 return RereBeta
