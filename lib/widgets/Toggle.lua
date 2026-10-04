@@ -32,6 +32,7 @@ return function(Iris, widgets)
             constraint.MaxTextSize = Iris._config.TextSize; constraint.MinTextSize = 8; constraint.Parent = bind
             widgets.applyFrameStyle(bind)
             bind.Parent = row
+            widget.KeybindButton = bind
             widgets.applyInteractionHighlights("Background", bind, bind, {
                 Color = Iris._config.ButtonColor, Transparency = Iris._config.ButtonTransparency,
                 HoveredColor = Iris._config.ButtonHoveredColor, HoveredTransparency = Iris._config.ButtonHoveredTransparency,
@@ -100,10 +101,21 @@ return function(Iris, widgets)
             widget.Instance.Keybind.Text = manager.capture == entry.id and "..." or tostring(key)
         end,
         Discard = function(widget)
-            local entry = manager.entries[widget.state.keybind.ID]
-            if entry then entry.buttons[widget.Instance.Keybind] = nil end
-            widget.Instance:Destroy()
-            widgets.discardState(widget)
+            local states = rawget(widget, "state")
+            local keybind = states and states.keybind
+            local entry = keybind and manager.entries[keybind.ID]
+            local instance = rawget(widget, "Instance")
+            -- A parent may have destroyed the row before its widget is discarded.
+            local button = rawget(widget, "KeybindButton") or (instance and instance:FindFirstChild("Keybind"))
+            if entry then
+                if button then entry.buttons[button] = nil end
+                for registered in pairs(entry.buttons) do
+                    if not registered.Parent then entry.buttons[registered] = nil end
+                end
+            end
+            widget.KeybindButton = nil
+            if instance then instance:Destroy() end
+            if states then widgets.discardState(widget) end
         end,
     })
 end
