@@ -12,6 +12,10 @@ Demo Place: https://rblx.games/7245022703
 
 ### Executor Usage
 
+Native `Rere.Toggle({"Feature"}, {isChecked = enabled, keybind = key})` includes a
+left-side keybind button, keyboard activation, and duplicate-key confirmation.
+See [the keybind toggle guide](docs/keybind-toggles.md).
+
 Load the single-file bundle from your executor:
 
 Heres a basic Example:

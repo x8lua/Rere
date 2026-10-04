@@ -441,6 +441,8 @@ return function(Iris: Types.Internal)
     require(script.Text)(Iris, widgets)
     require(script.Button)(Iris, widgets)
     require(script.Checkbox)(Iris, widgets)
+    require(script.Keybind)(Iris, widgets)
+    require(script.Toggle)(Iris, widgets)
     require(script.RadioButton)(Iris, widgets)
     require(script.Image)(Iris, widgets)
 

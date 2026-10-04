@@ -268,6 +268,12 @@ export type Checkbox = Widget & {
     },
 } & Unchecked & Checked & Hovered
 
+export type Toggle = Widget & {
+    arguments: {Text: string?},
+    state: {isChecked: State<boolean>, keybind: State<string>},
+    keybindChanged: () -> boolean,
+} & Unchecked & Checked & Hovered
+
 export type RadioButton = Widget & {
     arguments: {
         Text: string?,

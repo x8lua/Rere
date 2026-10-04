@@ -19,6 +19,7 @@ export type Text = Types.Text
 export type SeparatorText = Types.SeparatorText
 export type Button = Types.Button
 export type Checkbox = Types.Checkbox
+export type Toggle = Types.Toggle
 export type RadioButton = Types.RadioButton
 export type Image = Types.Image
 export type ImageButton = Types.ImageButton
