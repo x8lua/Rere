@@ -125,7 +125,8 @@ return function(Iris, widgets, window, tabBar, parent)
     end
     function controller.Jump(section)
         if controller.destroyed or not section.Instance.Parent then return end
-        section.state.isUncollapsed:set(true)
+        local states = rawget(section, "state")
+        if states and states.isUncollapsed then states.isUncollapsed:set(true) end
         task.defer(function()
             if controller.destroyed or not section.Instance.Parent then return end
             local offset = section.Instance.AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y

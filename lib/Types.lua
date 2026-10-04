@@ -543,6 +543,7 @@ export type Iris = {
 
     -- Text Widget API
     Text: WidgetCall<Text, WidgetArguments, nil>,
+    Section: WidgetCall<Text, WidgetArguments, nil>,
     TextWrapped: WidgetCall<Text, WidgetArguments, nil>,
     TextColored: WidgetCall<Text, WidgetArguments, nil>,
     SeparatorText: WidgetCall<SeparatorText, WidgetArguments, nil>,

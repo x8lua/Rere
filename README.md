@@ -16,6 +16,9 @@ Native `Rere.Toggle({"Feature"}, {isChecked = enabled, keybind = key})` includes
 left-side keybind button, keyboard activation, and duplicate-key confirmation.
 See [the keybind toggle guide](docs/keybind-toggles.md).
 
+`Rere.Section({"Movement"})` adds a plain, non-collapsible heading to beta tab
+section navigation. See [the section guide](docs/sections.md).
+
 Load the single-file bundle from your executor:
 
 Heres a basic Example:

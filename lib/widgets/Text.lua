@@ -1,6 +1,15 @@
 local Types = require(script.Parent.Parent.Types)
 
 return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
+    local function unregisterSection(widget)
+        local tab = rawget(widget, "BetaSectionTab")
+        if not tab then return end
+        local sections = rawget(tab, "BetaSections")
+        if sections then sections[widget.ID] = nil end
+        widget.BetaSectionTab = nil
+        local navigation = rawget(tab.parentWidget, "BetaNavigation")
+        if navigation then navigation.Refresh() end
+    end
     --stylua: ignore
     Iris.WidgetConstructor("Text", {
         hasState = false,
@@ -10,6 +19,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             ["Wrapped"] = 2,
             ["Color"] = 3,
             ["RichText"] = 4,
+            ["Section"] = 5,
         },
         Events = {
             ["hovered"] = widgets.EVENTS.hover(function(thisWidget: Types.Widget)
@@ -58,8 +68,20 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             end
 
             Text.Text = thisWidget.arguments.Text
+            local tab = thisWidget.parentWidget
+            if thisWidget.arguments.Section and tab.type == "Tab" then
+                if rawget(thisWidget, "BetaSectionTab") ~= tab then unregisterSection(thisWidget) end
+                tab.BetaSections = rawget(tab, "BetaSections") or {}
+                tab.BetaSections[thisWidget.ID] = thisWidget
+                thisWidget.BetaSectionTab = tab
+                local navigation = rawget(tab.parentWidget, "BetaNavigation")
+                if navigation then navigation.Refresh() end
+            else
+                unregisterSection(thisWidget)
+            end
         end,
         Discard = function(thisWidget: Types.Text)
+            unregisterSection(thisWidget)
             thisWidget.Instance:Destroy()
         end,
     } :: Types.WidgetClass)

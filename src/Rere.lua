@@ -461,6 +461,13 @@ sources[nodes['API']] = function(script)
         ]=]
         Iris.Text = wrapper("Text")
 
+        -- A non-collapsible section heading with a beta tab navigation anchor.
+        Iris.Section = function(arguments: Types.WidgetArguments)
+            local heading = table.clone(arguments)
+            heading[5] = true
+            return Iris.Internal._Insert("Text", heading)
+        end
+
         --[=[
             @within Text
             @prop TextWrapped Iris.Text
@@ -3428,6 +3435,7 @@ sources[nodes['Types']] = function(script)
 
         -- Text Widget API
         Text: WidgetCall<Text, WidgetArguments, nil>,
+        Section: WidgetCall<Text, WidgetArguments, nil>,
         TextWrapped: WidgetCall<Text, WidgetArguments, nil>,
         TextColored: WidgetCall<Text, WidgetArguments, nil>,
         SeparatorText: WidgetCall<SeparatorText, WidgetArguments, nil>,
@@ -3805,6 +3813,7 @@ sources[nodes['WidgetTypes']] = function(script)
             Wrapped: boolean?,
             Color: Color3?,
             RichText: boolean?,
+            Section: boolean?,
         },
     } & Hovered
 
@@ -11627,7 +11636,8 @@ sources[nodes['widgets/SectionNavigation']] = function(script)
         end
         function controller.Jump(section)
             if controller.destroyed or not section.Instance.Parent then return end
-            section.state.isUncollapsed:set(true)
+            local states = rawget(section, "state")
+            if states and states.isUncollapsed then states.isUncollapsed:set(true) end
             task.defer(function()
                 if controller.destroyed or not section.Instance.Parent then return end
                 local offset = section.Instance.AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y
@@ -12823,6 +12833,15 @@ sources[nodes['widgets/Text']] = function(script)
     local Types = require(script.Parent.Parent.Types)
 
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
+        local function unregisterSection(widget)
+            local tab = rawget(widget, "BetaSectionTab")
+            if not tab then return end
+            local sections = rawget(tab, "BetaSections")
+            if sections then sections[widget.ID] = nil end
+            widget.BetaSectionTab = nil
+            local navigation = rawget(tab.parentWidget, "BetaNavigation")
+            if navigation then navigation.Refresh() end
+        end
         --stylua: ignore
         Iris.WidgetConstructor("Text", {
             hasState = false,
@@ -12832,6 +12851,7 @@ sources[nodes['widgets/Text']] = function(script)
                 ["Wrapped"] = 2,
                 ["Color"] = 3,
                 ["RichText"] = 4,
+                ["Section"] = 5,
             },
             Events = {
                 ["hovered"] = widgets.EVENTS.hover(function(thisWidget: Types.Widget)
@@ -12880,8 +12900,20 @@ sources[nodes['widgets/Text']] = function(script)
                 end
 
                 Text.Text = thisWidget.arguments.Text
+                local tab = thisWidget.parentWidget
+                if thisWidget.arguments.Section and tab.type == "Tab" then
+                    if rawget(thisWidget, "BetaSectionTab") ~= tab then unregisterSection(thisWidget) end
+                    tab.BetaSections = rawget(tab, "BetaSections") or {}
+                    tab.BetaSections[thisWidget.ID] = thisWidget
+                    thisWidget.BetaSectionTab = tab
+                    local navigation = rawget(tab.parentWidget, "BetaNavigation")
+                    if navigation then navigation.Refresh() end
+                else
+                    unregisterSection(thisWidget)
+                end
             end,
             Discard = function(thisWidget: Types.Text)
+                unregisterSection(thisWidget)
                 thisWidget.Instance:Destroy()
             end,
         } :: Types.WidgetClass)
@@ -15155,5 +15187,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261004002"
+RereBeta.BetaVersion = "20261004003"
 return RereBeta

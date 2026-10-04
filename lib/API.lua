@@ -418,6 +418,13 @@ return function(Iris: Types.Iris)
     ]=]
     Iris.Text = wrapper("Text")
 
+    -- A non-collapsible section heading with a beta tab navigation anchor.
+    Iris.Section = function(arguments: Types.WidgetArguments)
+        local heading = table.clone(arguments)
+        heading[5] = true
+        return Iris.Internal._Insert("Text", heading)
+    end
+
     --[=[
         @within Text
         @prop TextWrapped Iris.Text
