@@ -169,6 +169,7 @@ end
     Shuts Iris down. This can only be called once, and Iris cannot be started once shut down.
 ]=]
 function Iris.Shutdown()
+    Internal._keybinds.Cleanup()
     Internal._started = false
     Internal._shutdown = true
 
@@ -741,5 +742,7 @@ Iris.ShowDemoWindow = require(script.demoWindow)(Iris)
 
 require(script.widgets)(Internal)
 require(script.API)(Iris)
+
+table.insert(Internal._connectedFunctions, function() Internal._keybinds.Render(Iris) end)
 
 return Iris

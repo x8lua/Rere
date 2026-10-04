@@ -40,6 +40,7 @@ export type Text = WidgetTypes.Text
 export type SeparatorText = WidgetTypes.SeparatorText
 export type Button = WidgetTypes.Button
 export type Checkbox = WidgetTypes.Checkbox
+export type Toggle = WidgetTypes.Toggle
 export type RadioButton = WidgetTypes.RadioButton
 export type Image = WidgetTypes.Image
 export type ImageButton = WidgetTypes.ImageButton
@@ -245,6 +246,7 @@ export type Internal = {
     _connectedFunctions: { () -> () },
     _connections: { RBXScriptConnection },
     _initFunctions: { () -> () },
+    _keybinds: any,
     _cycleCoroutine: thread?,
 
     --[[
@@ -550,6 +552,13 @@ export type Iris = {
     Button: WidgetCall<Button, WidgetArguments, nil>,
     SmallButton: WidgetCall<Button, WidgetArguments, nil>,
     Checkbox: WidgetCall<Checkbox, WidgetArguments, WidgetStates?>,
+    Toggle: WidgetCall<Toggle, WidgetArguments, WidgetStates?>,
+    ConfigureKeybinds: (options: {[string]: any}?) -> (),
+    RegisterKeybind: (keybind: State<string>, action: () -> (), label: string?) -> (() -> ()),
+    BeginKeybindCapture: (keybind: State<string>) -> (),
+    CancelKeybindCapture: () -> (),
+    IsCapturingKeybind: () -> boolean,
+    HasKeybindConflict: () -> boolean,
     RadioButton: WidgetCall<RadioButton, WidgetArguments, WidgetStates?>,
 
     -- Tree Widget API

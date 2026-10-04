@@ -622,6 +622,26 @@ return function(Iris: Types.Iris)
         ```
     ]=]
     Iris.Checkbox = wrapper("Checkbox")
+    Iris.Toggle = wrapper("Toggle")
+    function Iris.ConfigureKeybinds(options)
+        Iris.Internal._keybinds.options = options or {}
+    end
+    function Iris.RegisterKeybind(keybind, action, label)
+        Iris.Internal._keybinds.Register(keybind, action, label)
+        return function() Iris.Internal._keybinds.Unregister(keybind) end
+    end
+    function Iris.BeginKeybindCapture(keybind)
+        Iris.Internal._keybinds.Begin(keybind)
+    end
+    function Iris.CancelKeybindCapture()
+        Iris.Internal._keybinds.Cancel()
+    end
+    function Iris.IsCapturingKeybind()
+        return Iris.Internal._keybinds.capture ~= nil
+    end
+    function Iris.HasKeybindConflict()
+        return Iris.Internal._keybinds.conflict ~= nil
+    end
 
     --[=[
         @within Basic
