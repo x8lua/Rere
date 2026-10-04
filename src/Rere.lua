@@ -21,6 +21,7 @@ nodes['widgets/Combo'] = node('Combo', nodes['widgets'])
 nodes['widgets/Format'] = node('Format', nodes['widgets'])
 nodes['widgets/Image'] = node('Image', nodes['widgets'])
 nodes['widgets/Input'] = node('Input', nodes['widgets'])
+nodes['widgets/Keybind'] = node('Keybind', nodes['widgets'])
 nodes['widgets/Menu'] = node('Menu', nodes['widgets'])
 nodes['widgets/Plot'] = node('Plot', nodes['widgets'])
 nodes['widgets/RadioButton'] = node('RadioButton', nodes['widgets'])
@@ -28,6 +29,7 @@ nodes['widgets/Root'] = node('Root', nodes['widgets'])
 nodes['widgets/Tab'] = node('Tab', nodes['widgets'])
 nodes['widgets/Table'] = node('Table', nodes['widgets'])
 nodes['widgets/Text'] = node('Text', nodes['widgets'])
+nodes['widgets/Toggle'] = node('Toggle', nodes['widgets'])
 nodes['widgets/Tree'] = node('Tree', nodes['widgets'])
 nodes['widgets/Window'] = node('Window', nodes['widgets'])
 local function requireModule(module)
@@ -661,6 +663,26 @@ sources[nodes['API']] = function(script)
             ```
         ]=]
         Iris.Checkbox = wrapper("Checkbox")
+        Iris.Toggle = wrapper("Toggle")
+        function Iris.ConfigureKeybinds(options)
+            Iris.Internal._keybinds.options = options or {}
+        end
+        function Iris.RegisterKeybind(keybind, action, label)
+            Iris.Internal._keybinds.Register(keybind, action, label)
+            return function() Iris.Internal._keybinds.Unregister(keybind) end
+        end
+        function Iris.BeginKeybindCapture(keybind)
+            Iris.Internal._keybinds.Begin(keybind)
+        end
+        function Iris.CancelKeybindCapture()
+            Iris.Internal._keybinds.Cancel()
+        end
+        function Iris.IsCapturingKeybind()
+            return Iris.Internal._keybinds.capture ~= nil
+        end
+        function Iris.HasKeybindConflict()
+            return Iris.Internal._keybinds.conflict ~= nil
+        end
 
         --[=[
             @within Basic
@@ -2831,6 +2853,7 @@ sources[nodes['PubTypes']] = function(script)
     export type SeparatorText = Types.SeparatorText
     export type Button = Types.Button
     export type Checkbox = Types.Checkbox
+    export type Toggle = Types.Toggle
     export type RadioButton = Types.RadioButton
     export type Image = Types.Image
     export type ImageButton = Types.ImageButton
@@ -2900,6 +2923,7 @@ sources[nodes['Types']] = function(script)
     export type SeparatorText = WidgetTypes.SeparatorText
     export type Button = WidgetTypes.Button
     export type Checkbox = WidgetTypes.Checkbox
+    export type Toggle = WidgetTypes.Toggle
     export type RadioButton = WidgetTypes.RadioButton
     export type Image = WidgetTypes.Image
     export type ImageButton = WidgetTypes.ImageButton
@@ -3105,6 +3129,7 @@ sources[nodes['Types']] = function(script)
         _connectedFunctions: { () -> () },
         _connections: { RBXScriptConnection },
         _initFunctions: { () -> () },
+        _keybinds: any,
         _cycleCoroutine: thread?,
 
         --[[
@@ -3409,6 +3434,13 @@ sources[nodes['Types']] = function(script)
         Button: WidgetCall<Button, WidgetArguments, nil>,
         SmallButton: WidgetCall<Button, WidgetArguments, nil>,
         Checkbox: WidgetCall<Checkbox, WidgetArguments, WidgetStates?>,
+        Toggle: WidgetCall<Toggle, WidgetArguments, WidgetStates?>,
+        ConfigureKeybinds: (options: {[string]: any}?) -> (),
+        RegisterKeybind: (keybind: State<string>, action: () -> (), label: string?) -> (() -> ()),
+        BeginKeybindCapture: (keybind: State<string>) -> (),
+        CancelKeybindCapture: () -> (),
+        IsCapturingKeybind: () -> boolean,
+        HasKeybindConflict: () -> boolean,
         RadioButton: WidgetCall<RadioButton, WidgetArguments, WidgetStates?>,
 
         -- Tree Widget API
@@ -3796,6 +3828,12 @@ sources[nodes['WidgetTypes']] = function(script)
         state: {
             isChecked: State<boolean>,
         },
+    } & Unchecked & Checked & Hovered
+
+    export type Toggle = Widget & {
+        arguments: {Text: string?},
+        state: {isChecked: State<boolean>, keybind: State<string>},
+        keybindChanged: () -> boolean,
     } & Unchecked & Checked & Hovered
 
     export type RadioButton = Widget & {
@@ -6509,6 +6547,7 @@ sources[nodes['Iris']] = function(script)
         Shuts Iris down. This can only be called once, and Iris cannot be started once shut down.
     ]=]
     function Iris.Shutdown()
+        Internal._keybinds.Cleanup()
         Internal._started = false
         Internal._shutdown = true
 
@@ -7081,6 +7120,8 @@ sources[nodes['Iris']] = function(script)
 
     require(script.widgets)(Internal)
     require(script.API)(Iris)
+
+    table.insert(Internal._connectedFunctions, function() Internal._keybinds.Render(Iris) end)
 
     return Iris
 
@@ -9682,6 +9723,167 @@ sources[nodes['widgets/Input']] = function(script)
                 widgets.discardState(thisWidget)
             end,
         } :: Types.WidgetClass)
+    end
+
+end
+sources[nodes['widgets/Keybind']] = function(script)
+    local require = requireModule
+    --!nocheck
+    -- One keyboard listener per library instance. Bindings outlive tab widget disposal.
+    return function(Internal, widgets)
+        local manager = {entries = {}, capture = nil, conflict = nil, options = {}}
+        Internal._keybinds = manager
+        local UIS = widgets.UserInputService
+
+        local function keyName(value)
+            if typeof(value) == "EnumItem" and value.EnumType == Enum.KeyCode then return value.Name end
+            if value == "None" then return value end
+            if type(value) == "string" and Enum.KeyCode[value] and value ~= "Unknown" then return value end
+            return "None"
+        end
+        local function notify(name, value)
+            local callback = manager.options[name]
+            if callback then callback(value) end
+        end
+        local function refresh(entry)
+            for button in pairs(entry.buttons) do
+                if button.Parent then
+                    button.Text = manager.capture == entry.id and "..." or keyName(entry.keybind.value)
+                else entry.buttons[button] = nil end
+            end
+        end
+        function manager.Register(keybind, action, label)
+            assert(type(keybind) == "table" and type(keybind.set) == "function", "Keybind requires a Rere State")
+            local id = keybind.ID
+            local entry = manager.entries[id]
+            if not entry then
+                entry = {id = id, keybind = keybind, buttons = {}}
+                manager.entries[id] = entry
+                entry.disconnect = keybind:onChange(function() refresh(entry) end)
+            end
+            entry.action = action
+            entry.label = label or entry.label or id
+            return entry
+        end
+        function manager.Unregister(keybind)
+            local id = keybind.ID
+            if manager.capture == id then manager.Cancel() end
+            if manager.conflict then manager.Resolve(false) end
+            local entry = manager.entries[id]
+            if entry and entry.disconnect then entry.disconnect() end
+            manager.entries[id] = nil
+        end
+        function manager.Cancel()
+            local previous = manager.entries[manager.capture]
+            manager.capture = nil
+            if previous then refresh(previous) end
+            notify("OnCaptureChanged", nil)
+        end
+        function manager.Begin(keybind)
+            local entry = manager.entries[keybind.ID]
+            assert(entry, "Register this keybind before capturing it")
+            manager.Cancel()
+            if manager.conflict then manager.Resolve(false) end
+            manager.capture = entry.id
+            refresh(entry)
+            notify("OnCaptureChanged", entry.id)
+        end
+        function manager.Assign(entry, name)
+            local conflicts = {}
+            if name ~= "None" then
+                for _, other in pairs(manager.entries) do
+                    if other.id ~= entry.id and keyName(other.keybind.value) == name then
+                        table.insert(conflicts, other)
+                    end
+                end
+            end
+            if #conflicts > 0 then
+                table.sort(conflicts, function(a, b) return a.label < b.label end)
+                manager.conflict = {entry = entry, name = name, conflicts = conflicts}
+                manager.dialogOpened = nil
+                notify("OnConflictChanged", manager.conflict)
+            else entry.keybind:set(name) end
+        end
+        function manager.Resolve(move)
+            local conflict = manager.conflict
+            if not conflict then return end
+            manager.conflict = nil
+            if move then
+                -- Recheck current values: bindings may have changed while the dialog was open.
+                for _, entry in pairs(manager.entries) do
+                    if entry.id ~= conflict.entry.id and keyName(entry.keybind.value) == conflict.name then
+                        entry.keybind:set("None")
+                    end
+                end
+                conflict.entry.keybind:set(conflict.name)
+            end
+            notify("OnConflictChanged", nil)
+        end
+        function manager.Cleanup()
+            manager.Cancel()
+            manager.Resolve(false)
+            for _, entry in pairs(manager.entries) do
+                if entry.disconnect then entry.disconnect() end
+                table.clear(entry.buttons); entry.action = nil
+            end
+            table.clear(manager.entries)
+        end
+        widgets.registerEvent("InputBegan", function(event, processed)
+            if not Internal._started or Internal._shutdown then return end
+            if event.UserInputType ~= Enum.UserInputType.Keyboard or event.KeyCode == Enum.KeyCode.Unknown then return end
+            if manager.capture then
+                if UIS:GetFocusedTextBox() then return end
+                local entry = manager.entries[manager.capture]
+                manager.Cancel()
+                if entry then manager.Assign(entry, event.KeyCode == Enum.KeyCode.Escape and "None" or event.KeyCode.Name) end
+                return
+            end
+            if manager.conflict then
+                if event.KeyCode == Enum.KeyCode.Escape then manager.Resolve(false) end
+                return
+            end
+            if processed or UIS:GetFocusedTextBox() then return end
+            if manager.options.CanTrigger and not manager.options.CanTrigger() then return end
+            local selected
+            for _, entry in pairs(manager.entries) do
+                if keyName(entry.keybind.value) == event.KeyCode.Name and entry.action then
+                    -- A config with duplicate keys is ambiguous: do not toggle several controls.
+                    if selected then return end
+                    selected = entry
+                end
+            end
+            if selected then
+                selected.action()
+                notify("OnTriggered", selected.id)
+            end
+        end)
+        function manager.Render(Iris)
+            local conflict = manager.conflict
+            if not conflict then return end
+            Iris.PushId("Rere/native-keybind-conflict")
+            if not manager.dialogOpened then
+                Iris.SetNextWidgetID("Rere/keybind/dialog/opened")
+                manager.dialogOpened = Iris.State(true)
+                manager.dialogOpened:set(true)
+            end
+            Iris.SetNextWidgetID("Rere/keybind/dialog/size")
+            local size = Iris.State(Vector2.new(320, 180))
+            Iris.SetNextWidgetID("Rere/keybind/dialog/window")
+            local dialog = Iris.Window({"Keybind Conflict", false, true, true}, {size = size, isOpened = manager.dialogOpened})
+            if dialog.state.isOpened.value then
+                local labels = {}
+                for _, entry in ipairs(conflict.conflicts) do table.insert(labels, entry.label) end
+                Iris.TextWrapped({conflict.name .. " is used by " .. table.concat(labels, ", ") .. ". Move this keybind?"})
+                if Iris.Button({"Move keybind"}).clicked() then manager.Resolve(true) end
+                if Iris.Button({"Cancel"}).clicked() then manager.Resolve(false) end
+                if manager.focusDialog ~= conflict then
+                    manager.focusDialog = conflict
+                    Internal.SetFocusedWindow(dialog)
+                end
+            else manager.Resolve(false) end
+            Iris.End()
+            Iris.PopId()
+        end
     end
 
 end
@@ -12342,6 +12544,119 @@ sources[nodes['widgets/Text']] = function(script)
     end
 
 end
+sources[nodes['widgets/Toggle']] = function(script)
+    local require = requireModule
+    --!nocheck
+    return function(Iris, widgets)
+        local manager = Iris._keybinds
+        Iris.WidgetConstructor("Toggle", {
+            hasState = true, hasChildren = false,
+            Args = {Text = 1},
+            Events = {
+                checked = {Init = function() end, Get = function(widget) return widget.lastCheckedTick == Iris._cycleTick end},
+                unchecked = {Init = function() end, Get = function(widget) return widget.lastUncheckedTick == Iris._cycleTick end},
+                keybindChanged = {Init = function() end, Get = function(widget) return widget.lastKeybindTick == Iris._cycleTick end},
+                hovered = widgets.EVENTS.hover(function(widget) return widget.Instance end),
+            },
+            Generate = function(widget)
+                local row = Instance.new("Frame")
+                row.Name = "Rere_Toggle"
+                row.AutomaticSize = Enum.AutomaticSize.XY
+                row.Size = UDim2.fromOffset(0, 0)
+                row.BackgroundTransparency = 1
+                widgets.UIListLayout(row, Enum.FillDirection.Horizontal, UDim.new(0, Iris._config.ItemInnerSpacing.X)).VerticalAlignment = Enum.VerticalAlignment.Center
+
+                local height = Iris._config.TextSize + 2 * Iris._config.FramePadding.Y
+                local bind = Instance.new("TextButton")
+                bind.Name = "Keybind"
+                bind.Size = UDim2.fromOffset(math.max(62, height * 2), height)
+                bind.BackgroundColor3 = Iris._config.ButtonColor
+                bind.BackgroundTransparency = Iris._config.ButtonTransparency
+                bind.AutoButtonColor = false
+                widgets.applyTextStyle(bind)
+                bind.TextXAlignment = Enum.TextXAlignment.Center
+                bind.TextScaled = true
+                local constraint = Instance.new("UITextSizeConstraint")
+                constraint.MaxTextSize = Iris._config.TextSize; constraint.MinTextSize = 8; constraint.Parent = bind
+                widgets.applyFrameStyle(bind)
+                bind.Parent = row
+                widgets.applyInteractionHighlights("Background", bind, bind, {
+                    Color = Iris._config.ButtonColor, Transparency = Iris._config.ButtonTransparency,
+                    HoveredColor = Iris._config.ButtonHoveredColor, HoveredTransparency = Iris._config.ButtonHoveredTransparency,
+                    ActiveColor = Iris._config.ButtonActiveColor, ActiveTransparency = Iris._config.ButtonActiveTransparency,
+                })
+                widgets.applyButtonClick(bind, function() manager.Begin(widget.state.keybind) end)
+
+                local button = Instance.new("TextButton")
+                button.Name = "ToggleButton"
+                button.LayoutOrder = 1
+                button.AutomaticSize = Enum.AutomaticSize.XY
+                button.Size = UDim2.fromOffset(0, 0)
+                button.BackgroundTransparency = 1; button.BorderSizePixel = 0
+                button.Text = ""; button.AutoButtonColor = false
+                widgets.UIListLayout(button, Enum.FillDirection.Horizontal, UDim.new(0, Iris._config.ItemInnerSpacing.X)).VerticalAlignment = Enum.VerticalAlignment.Center
+                button.Parent = row
+                local box = Instance.new("Frame")
+                box.Name = "Box"; box.Size = UDim2.fromOffset(height, height)
+                box.BackgroundColor3 = Iris._config.FrameBgColor; box.BackgroundTransparency = Iris._config.FrameBgTransparency
+                widgets.applyFrameStyle(box, true)
+                widgets.UIPadding(box, Vector2.new(math.floor(height / 10), math.floor(height / 10)))
+                box.Parent = button
+                widgets.applyInteractionHighlights("Background", button, box, {
+                    Color = Iris._config.FrameBgColor, Transparency = Iris._config.FrameBgTransparency,
+                    HoveredColor = Iris._config.FrameBgHoveredColor, HoveredTransparency = Iris._config.FrameBgHoveredTransparency,
+                    ActiveColor = Iris._config.FrameBgActiveColor, ActiveTransparency = Iris._config.FrameBgActiveTransparency,
+                })
+                local check = Instance.new("ImageLabel")
+                check.Name = "Checkmark"; check.Size = UDim2.fromScale(1, 1); check.BackgroundTransparency = 1
+                check.Image = widgets.ICONS.CHECKMARK; check.ImageColor3 = Iris._config.CheckMarkColor
+                check.ImageTransparency = 1; check.ScaleType = Enum.ScaleType.Fit; check.Parent = box
+                local label = Instance.new("TextLabel")
+                label.Name = "TextLabel"; label.AutomaticSize = Enum.AutomaticSize.XY
+                label.BackgroundTransparency = 1; label.LayoutOrder = 1
+                widgets.applyTextStyle(label); label.Parent = button
+                widgets.applyButtonClick(button, function()
+                    widget.state.isChecked:set(not widget.state.isChecked.value)
+                end)
+                return row
+            end,
+            GenerateState = function(widget)
+                if widget.state.isChecked == nil then widget.state.isChecked = Iris._widgetState(widget, "checked", false) end
+                if widget.state.keybind == nil then widget.state.keybind = Iris._widgetState(widget, "keybind", "None") end
+            end,
+            Update = function(widget)
+                widget.Instance.ToggleButton.TextLabel.Text = widget.arguments.Text or "Toggle"
+                local states = rawget(widget, "state")
+                if states then
+                    local checked = states.isChecked
+                    local entry = manager.Register(states.keybind, function() checked:set(not checked.value) end, widget.arguments.Text or "Toggle")
+                    entry.buttons[widget.Instance.Keybind] = true
+                end
+            end,
+            UpdateState = function(widget)
+                local checked = widget.state.isChecked.value
+                widget.Instance.ToggleButton.Box.Checkmark.ImageTransparency = checked and Iris._config.CheckMarkTransparency or 1
+                if widget.previousChecked ~= checked then
+                    widget.previousChecked = checked
+                    if checked then widget.lastCheckedTick = Iris._cycleTick + 1 else widget.lastUncheckedTick = Iris._cycleTick + 1 end
+                end
+                local key = widget.state.keybind.value
+                if widget.previousKeybind ~= key then widget.previousKeybind = key; widget.lastKeybindTick = Iris._cycleTick + 1 end
+                local checkedState = widget.state.isChecked
+                local entry = manager.Register(widget.state.keybind, function() checkedState:set(not checkedState.value) end, widget.arguments.Text or "Toggle")
+                entry.buttons[widget.Instance.Keybind] = true
+                widget.Instance.Keybind.Text = manager.capture == entry.id and "..." or tostring(key)
+            end,
+            Discard = function(widget)
+                local entry = manager.entries[widget.state.keybind.ID]
+                if entry then entry.buttons[widget.Instance.Keybind] = nil end
+                widget.Instance:Destroy()
+                widgets.discardState(widget)
+            end,
+        })
+    end
+
+end
 sources[nodes['widgets/Tree']] = function(script)
     local require = requireModule
     local Types = require(script.Parent.Parent.Types)
@@ -14341,6 +14656,8 @@ sources[nodes['widgets']] = function(script)
         require(script.Text)(Iris, widgets)
         require(script.Button)(Iris, widgets)
         require(script.Checkbox)(Iris, widgets)
+        require(script.Keybind)(Iris, widgets)
+        require(script.Toggle)(Iris, widgets)
         require(script.RadioButton)(Iris, widgets)
         require(script.Image)(Iris, widgets)
 
