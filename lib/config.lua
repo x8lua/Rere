@@ -285,6 +285,7 @@ local TemplateConfig = {
     },
 
     utilityDefault = {
+        BetaAnimations = true,
         UseScreenGUIs = true,
         IgnoreGuiInset = false,
         ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets,

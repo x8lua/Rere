@@ -15,6 +15,7 @@ nodes['PubTypes'] = node('PubTypes', nodes['Iris'])
 nodes['Types'] = node('Types', nodes['Iris'])
 nodes['widgets'] = node('widgets', nodes['Iris'])
 nodes['WidgetTypes'] = node('WidgetTypes', nodes['Iris'])
+nodes['widgets/BetaMotion'] = node('BetaMotion', nodes['widgets'])
 nodes['widgets/Button'] = node('Button', nodes['widgets'])
 nodes['widgets/Checkbox'] = node('Checkbox', nodes['widgets'])
 nodes['widgets/Combo'] = node('Combo', nodes['widgets'])
@@ -3365,6 +3366,7 @@ sources[nodes['Types']] = function(script)
         DisplayOrderOffset: number,
         ZIndexOffset: number,
 
+        BetaAnimations: boolean,
         MouseDoubleClickTime: number,
         MouseDoubleClickMaxDist: number,
         MouseDragThreshold: number,
@@ -4354,6 +4356,7 @@ sources[nodes['config']] = function(script)
         },
 
         utilityDefault = {
+            BetaAnimations = true,
             UseScreenGUIs = true,
             IgnoreGuiInset = false,
             ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets,
@@ -7084,6 +7087,65 @@ sources[nodes['Iris']] = function(script)
     require(script.API)(Iris)
 
     return Iris
+
+end
+sources[nodes['widgets/BetaMotion']] = function(script)
+    local require = requireModule
+    local TweenService = game:GetService("TweenService")
+    local Motion = {}
+
+    function Motion.Cancel(widget, slot)
+        local motions = rawget(widget, "BetaMotions")
+        local previous = motions and motions[slot]
+        if not previous then return end
+        motions[slot] = nil
+        if previous.Connection then previous.Connection:Disconnect() end
+        previous.Tween:Cancel()
+    end
+
+    function Motion.Play(widget, slot, object, goals, duration, enabled, completed)
+        Motion.Cancel(widget, slot)
+        if not enabled then
+            for key, value in pairs(goals) do object[key] = value end
+            if completed then completed() end
+            return
+        end
+        widget.BetaMotions = rawget(widget, "BetaMotions") or {}
+        local motion = {Tween = TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), goals)}
+        widget.BetaMotions[slot] = motion
+        motion.Connection = motion.Tween.Completed:Connect(function(status)
+            if widget.BetaMotions[slot] ~= motion then return end
+            widget.BetaMotions[slot] = nil
+            motion.Connection:Disconnect()
+            if status == Enum.PlaybackState.Completed and completed then completed() end
+        end)
+        motion.Tween:Play()
+    end
+
+    function Motion.Clear(widget)
+        widget.BetaMotionGeneration = (rawget(widget, "BetaMotionGeneration") or 0) + 1
+        local motions = rawget(widget, "BetaMotions")
+        if motions then
+            local slots = {}
+            for slot in pairs(motions) do table.insert(slots, slot) end
+            for _, slot in ipairs(slots) do Motion.Cancel(widget, slot) end
+        end
+    end
+
+    function Motion.ContentHeight(container)
+        local scale = 1
+        local ancestor = container
+        while ancestor do
+            local transform = ancestor:FindFirstChildWhichIsA("UIScale")
+            if transform then scale *= transform.Scale end
+            ancestor = ancestor.Parent
+        end
+        local padding = container.UIPadding
+        return container.UIListLayout.AbsoluteContentSize.Y / math.max(scale, 0.001)
+            + padding.PaddingTop.Offset + padding.PaddingBottom.Offset
+    end
+
+    return Motion
 
 end
 sources[nodes['widgets/Button']] = function(script)
@@ -11470,17 +11532,20 @@ end
 sources[nodes['widgets/Tab']] = function(script)
     local require = requireModule
     local Types = require(script.Parent.Parent.Types)
+    local Motion = require(script.Parent.BetaMotion)
 
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         local TextService = game:GetService("TextService")
-        local function styleTab(widget)
+        local function styleTab(widget, animate)
             local tab = widget.Instance
             local active = widget.state and widget.state.isOpened and widget.state.isOpened.value == true
             local config = Iris._config
-            tab.BackgroundColor3 = active and config.TabActiveColor or config.TabColor
-            tab.BackgroundTransparency = active and config.TabActiveTransparency or config.TabTransparency
+            Motion.Play(widget, "tabColor", tab, {
+                BackgroundColor3 = active and config.TabActiveColor or config.TabColor,
+                BackgroundTransparency = active and config.TabActiveTransparency or config.TabTransparency,
+            }, 0.14, animate and config.BetaAnimations ~= false)
             tab.TextLabel.TextColor3 = config.TextColor
-            tab.TextLabel.TextTransparency = active and config.TextTransparency or 0.15
+            Motion.Play(widget, "tabText", tab.TextLabel, {TextTransparency = active and config.TextTransparency or 0.15}, 0.16, animate and config.BetaAnimations ~= false)
             tab.TextLabel.FontFace = Font.fromEnum(active and Enum.Font.ArialBold or Enum.Font.Arial)
             tab.BetaEdge.BackgroundColor3 = config.SliderGrabColor
             tab.BetaEdge.Visible = active
@@ -11733,11 +11798,11 @@ sources[nodes['widgets/Tab']] = function(script)
                 rounding.CornerRadius = UDim.new(0, 2)
                 rounding.Parent = Tab
                 Tab.MouseEnter:Connect(function()
-                    Tab.BackgroundColor3 = Iris._config.TabHoveredColor
-                    Tab.BackgroundTransparency = Iris._config.TabHoveredTransparency
-                    Tab.TextLabel.TextTransparency = 0
+                    Motion.Play(thisWidget, "tabColor", Tab, {BackgroundColor3 = Iris._config.TabHoveredColor,
+                        BackgroundTransparency = Iris._config.TabHoveredTransparency}, 0.1, Iris._config.BetaAnimations ~= false)
+                    Motion.Play(thisWidget, "tabText", Tab.TextLabel, {TextTransparency = 0}, 0.1, Iris._config.BetaAnimations ~= false)
                 end)
-                Tab.MouseLeave:Connect(function() styleTab(thisWidget) end)
+                Tab.MouseLeave:Connect(function() styleTab(thisWidget, true) end)
                 widgets.applyButtonClick(Tab, function()
                     openTab(thisWidget.parentWidget, thisWidget.Index)
                     reveal(thisWidget)
@@ -11872,16 +11937,29 @@ sources[nodes['widgets/Tab']] = function(script)
                 local Tab = thisWidget.Instance :: TextButton
                 local Container = thisWidget.ChildContainer :: Frame
 
-                styleTab(thisWidget)
+                styleTab(thisWidget, true)
                 Container.Visible = thisWidget.state.isOpened.value == true
-                Container.Position = UDim2.fromOffset(0, 0)
                 Container.AutomaticSize = Enum.AutomaticSize.Y
                 Container.Size = UDim2.fromScale(1, 0)
                 if Container.Visible then
+                    local previous = rawget(thisWidget.parentWidget, "BetaLastSelected")
+                    thisWidget.parentWidget.BetaLastSelected = thisWidget.Index
+                    if not rawget(thisWidget, "BetaWasOpened") then
+                        Motion.Cancel(thisWidget, "content")
+                        local direction = previous and thisWidget.Index < previous and -1 or 1
+                        Container.Position = UDim2.fromOffset(direction * 10, 4)
+                        Motion.Play(thisWidget, "content", Container, {Position = UDim2.fromOffset(0, 0)}, 0.2, Iris._config.BetaAnimations ~= false)
+                        Tab.BetaEdge.Size = UDim2.new(0, 0, 0, 1)
+                        Motion.Play(thisWidget, "edge", Tab.BetaEdge, {Size = UDim2.new(1, -6, 0, 1)}, 0.2, Iris._config.BetaAnimations ~= false)
+                    end
                     thisWidget.lastSelectedTick = Iris._cycleTick + 1
                 else
+                    Motion.Cancel(thisWidget, "content")
+                    Motion.Cancel(thisWidget, "edge")
+                    Container.Position = UDim2.fromOffset(0, 0)
                     thisWidget.lastUnselectedTick = Iris._cycleTick + 1
                 end
+                thisWidget.BetaWasOpened = Container.Visible
                 local navigation = rawget(thisWidget.parentWidget, "BetaNavigation")
                 if navigation then navigation.Refresh() end
             end,
@@ -11889,6 +11967,7 @@ sources[nodes['widgets/Tab']] = function(script)
                 if thisWidget.state.isOpened.value == true then
                     closeTab(thisWidget.parentWidget, thisWidget.Index)
                 end
+                Motion.Clear(thisWidget)
                 
                 thisWidget.Instance:Destroy()
                 thisWidget.ChildContainer:Destroy()
@@ -12683,10 +12762,10 @@ end
 sources[nodes['widgets/Tree']] = function(script)
     local require = requireModule
     local Types = require(script.Parent.Parent.Types)
+    local Motion = require(script.Parent.BetaMotion)
 
     return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
-        local TweenService = game:GetService("TweenService")
-        local OpenTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local RunService = game:GetService("RunService")
 
         local abstractTree = {
             hasState = true,
@@ -12709,6 +12788,7 @@ sources[nodes['widgets/Tree']] = function(script)
                 end),
             },
             Discard = function(thisWidget: Types.CollapsingHeader)
+                Motion.Clear(thisWidget)
                 local tab = rawget(thisWidget, "BetaSectionTab")
                 if tab then
                     local sections = rawget(tab, "BetaSections")
@@ -12722,7 +12802,7 @@ sources[nodes['widgets/Tree']] = function(script)
             ChildAdded = function(thisWidget: Types.CollapsingHeader, _thisChild: Types.Widget)
                 local ChildContainer = thisWidget.ChildContainer :: Frame
 
-                ChildContainer.Visible = thisWidget.state.isUncollapsed.value
+                if thisWidget.state.isUncollapsed.value then ChildContainer.Visible = true end
 
                 return ChildContainer
             end,
@@ -12742,7 +12822,7 @@ sources[nodes['widgets/Tree']] = function(script)
                     ArrowGlyph.Rotation = TargetRotation
                 elseif PreviousRotation ~= TargetRotation then
                     ArrowGlyph:SetAttribute("TargetRotation", TargetRotation)
-                    TweenService:Create(ArrowGlyph, OpenTweenInfo, { Rotation = TargetRotation }):Play()
+                    Motion.Play(thisWidget, "arrow", ArrowGlyph, {Rotation = TargetRotation}, 0.16, Iris._config.BetaAnimations ~= false)
                 end
                 if isUncollapsed then
                     thisWidget.lastUncollapsedTick = Iris._cycleTick + 1
@@ -12750,26 +12830,49 @@ sources[nodes['widgets/Tree']] = function(script)
                     thisWidget.lastCollapsedTick = Iris._cycleTick + 1
                 end
 
-                if isUncollapsed and not ChildContainer.Visible then
-                    local Layout = ChildContainer.UIListLayout :: UIListLayout
-                    local Padding = ChildContainer.UIPadding :: UIPadding
-                    local TargetHeight = Layout.AbsoluteContentSize.Y + Padding.PaddingTop.Offset + Padding.PaddingBottom.Offset
-                    ChildContainer.AutomaticSize = Enum.AutomaticSize.None
-                    ChildContainer.Size = UDim2.new(1, 0, 0, 0)
-                    ChildContainer.Visible = true
-                    local OpenTween = TweenService:Create(ChildContainer, OpenTweenInfo, { Size = UDim2.new(1, 0, 0, TargetHeight) })
-                    OpenTween:Play()
-                    OpenTween.Completed:Once(function()
-                        if ChildContainer.Parent and thisWidget.state.isUncollapsed.value then
-                            ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
-                            ChildContainer.Size = UDim2.fromScale(1, 0)
-                        end
-                    end)
-                elseif not isUncollapsed then
+                local previous = rawget(thisWidget, "BetaWasUncollapsed")
+                thisWidget.BetaWasUncollapsed = isUncollapsed
+                if previous == isUncollapsed then return end
+                Motion.Cancel(thisWidget, "section")
+                thisWidget.BetaMotionGeneration = (rawget(thisWidget, "BetaMotionGeneration") or 0) + 1
+                local generation = thisWidget.BetaMotionGeneration
+                local enabled = Iris._config.BetaAnimations ~= false
+                if not enabled then
+                    ChildContainer.Visible = isUncollapsed
                     ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
                     ChildContainer.Size = UDim2.fromScale(1, 0)
+                    return
                 end
-                ChildContainer.Visible = isUncollapsed
+                -- Freeze the current height while the immediate-mode render adds/removes children.
+                local height = ChildContainer.Size.Y.Offset
+                if ChildContainer.AutomaticSize == Enum.AutomaticSize.Y then height = Motion.ContentHeight(ChildContainer) end
+                ChildContainer.AutomaticSize = Enum.AutomaticSize.None
+                ChildContainer.Size = UDim2.new(1, 0, 0, previous == nil and 0 or height)
+                ChildContainer.Visible = true
+                if isUncollapsed then
+                    Button.TextLabel.TextTransparency = 0.45
+                    Motion.Play(thisWidget, "sectionTitle", Button.TextLabel, {TextTransparency = Iris._config.TextTransparency}, 0.2, true)
+                    task.defer(function()
+                        -- Newly opened sections only receive children on the next render cycle.
+                        RunService.Heartbeat:Wait()
+                        if thisWidget.BetaMotionGeneration ~= generation or not ChildContainer.Parent then return end
+                        local targetHeight = Motion.ContentHeight(ChildContainer)
+                        Motion.Play(thisWidget, "section", ChildContainer, {Size = UDim2.new(1, 0, 0, targetHeight)}, 0.2, true, function()
+                            if thisWidget.BetaMotionGeneration ~= generation or not ChildContainer.Parent then return end
+                            ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
+                            ChildContainer.Size = UDim2.fromScale(1, 0)
+                        end)
+                    end)
+                else
+                    Motion.Cancel(thisWidget, "sectionTitle")
+                    Button.TextLabel.TextTransparency = Iris._config.TextTransparency
+                    Motion.Play(thisWidget, "section", ChildContainer, {Size = UDim2.new(1, 0, 0, 0)}, 0.16, true, function()
+                        if thisWidget.BetaMotionGeneration ~= generation or not ChildContainer.Parent then return end
+                        ChildContainer.Visible = false
+                        ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
+                        ChildContainer.Size = UDim2.fromScale(1, 0)
+                    end)
+                end
             end,
             GenerateState = function(thisWidget: Types.CollapsingHeader)
                 if thisWidget.state.isUncollapsed == nil then
@@ -14735,5 +14838,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261002005"
+RereBeta.BetaVersion = "20261004001"
 return RereBeta

@@ -1,15 +1,18 @@
 local Types = require(script.Parent.Parent.Types)
+local Motion = require(script.Parent.BetaMotion)
 
 return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
     local TextService = game:GetService("TextService")
-    local function styleTab(widget)
+    local function styleTab(widget, animate)
         local tab = widget.Instance
         local active = widget.state and widget.state.isOpened and widget.state.isOpened.value == true
         local config = Iris._config
-        tab.BackgroundColor3 = active and config.TabActiveColor or config.TabColor
-        tab.BackgroundTransparency = active and config.TabActiveTransparency or config.TabTransparency
+        Motion.Play(widget, "tabColor", tab, {
+            BackgroundColor3 = active and config.TabActiveColor or config.TabColor,
+            BackgroundTransparency = active and config.TabActiveTransparency or config.TabTransparency,
+        }, 0.14, animate and config.BetaAnimations ~= false)
         tab.TextLabel.TextColor3 = config.TextColor
-        tab.TextLabel.TextTransparency = active and config.TextTransparency or 0.15
+        Motion.Play(widget, "tabText", tab.TextLabel, {TextTransparency = active and config.TextTransparency or 0.15}, 0.16, animate and config.BetaAnimations ~= false)
         tab.TextLabel.FontFace = Font.fromEnum(active and Enum.Font.ArialBold or Enum.Font.Arial)
         tab.BetaEdge.BackgroundColor3 = config.SliderGrabColor
         tab.BetaEdge.Visible = active
@@ -262,11 +265,11 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             rounding.CornerRadius = UDim.new(0, 2)
             rounding.Parent = Tab
             Tab.MouseEnter:Connect(function()
-                Tab.BackgroundColor3 = Iris._config.TabHoveredColor
-                Tab.BackgroundTransparency = Iris._config.TabHoveredTransparency
-                Tab.TextLabel.TextTransparency = 0
+                Motion.Play(thisWidget, "tabColor", Tab, {BackgroundColor3 = Iris._config.TabHoveredColor,
+                    BackgroundTransparency = Iris._config.TabHoveredTransparency}, 0.1, Iris._config.BetaAnimations ~= false)
+                Motion.Play(thisWidget, "tabText", Tab.TextLabel, {TextTransparency = 0}, 0.1, Iris._config.BetaAnimations ~= false)
             end)
-            Tab.MouseLeave:Connect(function() styleTab(thisWidget) end)
+            Tab.MouseLeave:Connect(function() styleTab(thisWidget, true) end)
             widgets.applyButtonClick(Tab, function()
                 openTab(thisWidget.parentWidget, thisWidget.Index)
                 reveal(thisWidget)
@@ -401,16 +404,29 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             local Tab = thisWidget.Instance :: TextButton
             local Container = thisWidget.ChildContainer :: Frame
 
-            styleTab(thisWidget)
+            styleTab(thisWidget, true)
             Container.Visible = thisWidget.state.isOpened.value == true
-            Container.Position = UDim2.fromOffset(0, 0)
             Container.AutomaticSize = Enum.AutomaticSize.Y
             Container.Size = UDim2.fromScale(1, 0)
             if Container.Visible then
+                local previous = rawget(thisWidget.parentWidget, "BetaLastSelected")
+                thisWidget.parentWidget.BetaLastSelected = thisWidget.Index
+                if not rawget(thisWidget, "BetaWasOpened") then
+                    Motion.Cancel(thisWidget, "content")
+                    local direction = previous and thisWidget.Index < previous and -1 or 1
+                    Container.Position = UDim2.fromOffset(direction * 10, 4)
+                    Motion.Play(thisWidget, "content", Container, {Position = UDim2.fromOffset(0, 0)}, 0.2, Iris._config.BetaAnimations ~= false)
+                    Tab.BetaEdge.Size = UDim2.new(0, 0, 0, 1)
+                    Motion.Play(thisWidget, "edge", Tab.BetaEdge, {Size = UDim2.new(1, -6, 0, 1)}, 0.2, Iris._config.BetaAnimations ~= false)
+                end
                 thisWidget.lastSelectedTick = Iris._cycleTick + 1
             else
+                Motion.Cancel(thisWidget, "content")
+                Motion.Cancel(thisWidget, "edge")
+                Container.Position = UDim2.fromOffset(0, 0)
                 thisWidget.lastUnselectedTick = Iris._cycleTick + 1
             end
+            thisWidget.BetaWasOpened = Container.Visible
             local navigation = rawget(thisWidget.parentWidget, "BetaNavigation")
             if navigation then navigation.Refresh() end
         end,
@@ -418,6 +434,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             if thisWidget.state.isOpened.value == true then
                 closeTab(thisWidget.parentWidget, thisWidget.Index)
             end
+            Motion.Clear(thisWidget)
             
             thisWidget.Instance:Destroy()
             thisWidget.ChildContainer:Destroy()

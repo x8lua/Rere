@@ -1,8 +1,8 @@
 local Types = require(script.Parent.Parent.Types)
+local Motion = require(script.Parent.BetaMotion)
 
 return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
-    local TweenService = game:GetService("TweenService")
-    local OpenTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local RunService = game:GetService("RunService")
 
     local abstractTree = {
         hasState = true,
@@ -25,6 +25,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
             end),
         },
         Discard = function(thisWidget: Types.CollapsingHeader)
+            Motion.Clear(thisWidget)
             local tab = rawget(thisWidget, "BetaSectionTab")
             if tab then
                 local sections = rawget(tab, "BetaSections")
@@ -38,7 +39,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
         ChildAdded = function(thisWidget: Types.CollapsingHeader, _thisChild: Types.Widget)
             local ChildContainer = thisWidget.ChildContainer :: Frame
 
-            ChildContainer.Visible = thisWidget.state.isUncollapsed.value
+            if thisWidget.state.isUncollapsed.value then ChildContainer.Visible = true end
 
             return ChildContainer
         end,
@@ -58,7 +59,7 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 ArrowGlyph.Rotation = TargetRotation
             elseif PreviousRotation ~= TargetRotation then
                 ArrowGlyph:SetAttribute("TargetRotation", TargetRotation)
-                TweenService:Create(ArrowGlyph, OpenTweenInfo, { Rotation = TargetRotation }):Play()
+                Motion.Play(thisWidget, "arrow", ArrowGlyph, {Rotation = TargetRotation}, 0.16, Iris._config.BetaAnimations ~= false)
             end
             if isUncollapsed then
                 thisWidget.lastUncollapsedTick = Iris._cycleTick + 1
@@ -66,26 +67,49 @@ return function(Iris: Types.Internal, widgets: Types.WidgetUtility)
                 thisWidget.lastCollapsedTick = Iris._cycleTick + 1
             end
 
-            if isUncollapsed and not ChildContainer.Visible then
-                local Layout = ChildContainer.UIListLayout :: UIListLayout
-                local Padding = ChildContainer.UIPadding :: UIPadding
-                local TargetHeight = Layout.AbsoluteContentSize.Y + Padding.PaddingTop.Offset + Padding.PaddingBottom.Offset
-                ChildContainer.AutomaticSize = Enum.AutomaticSize.None
-                ChildContainer.Size = UDim2.new(1, 0, 0, 0)
-                ChildContainer.Visible = true
-                local OpenTween = TweenService:Create(ChildContainer, OpenTweenInfo, { Size = UDim2.new(1, 0, 0, TargetHeight) })
-                OpenTween:Play()
-                OpenTween.Completed:Once(function()
-                    if ChildContainer.Parent and thisWidget.state.isUncollapsed.value then
-                        ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
-                        ChildContainer.Size = UDim2.fromScale(1, 0)
-                    end
-                end)
-            elseif not isUncollapsed then
+            local previous = rawget(thisWidget, "BetaWasUncollapsed")
+            thisWidget.BetaWasUncollapsed = isUncollapsed
+            if previous == isUncollapsed then return end
+            Motion.Cancel(thisWidget, "section")
+            thisWidget.BetaMotionGeneration = (rawget(thisWidget, "BetaMotionGeneration") or 0) + 1
+            local generation = thisWidget.BetaMotionGeneration
+            local enabled = Iris._config.BetaAnimations ~= false
+            if not enabled then
+                ChildContainer.Visible = isUncollapsed
                 ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
                 ChildContainer.Size = UDim2.fromScale(1, 0)
+                return
             end
-            ChildContainer.Visible = isUncollapsed
+            -- Freeze the current height while the immediate-mode render adds/removes children.
+            local height = ChildContainer.Size.Y.Offset
+            if ChildContainer.AutomaticSize == Enum.AutomaticSize.Y then height = Motion.ContentHeight(ChildContainer) end
+            ChildContainer.AutomaticSize = Enum.AutomaticSize.None
+            ChildContainer.Size = UDim2.new(1, 0, 0, previous == nil and 0 or height)
+            ChildContainer.Visible = true
+            if isUncollapsed then
+                Button.TextLabel.TextTransparency = 0.45
+                Motion.Play(thisWidget, "sectionTitle", Button.TextLabel, {TextTransparency = Iris._config.TextTransparency}, 0.2, true)
+                task.defer(function()
+                    -- Newly opened sections only receive children on the next render cycle.
+                    RunService.Heartbeat:Wait()
+                    if thisWidget.BetaMotionGeneration ~= generation or not ChildContainer.Parent then return end
+                    local targetHeight = Motion.ContentHeight(ChildContainer)
+                    Motion.Play(thisWidget, "section", ChildContainer, {Size = UDim2.new(1, 0, 0, targetHeight)}, 0.2, true, function()
+                        if thisWidget.BetaMotionGeneration ~= generation or not ChildContainer.Parent then return end
+                        ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
+                        ChildContainer.Size = UDim2.fromScale(1, 0)
+                    end)
+                end)
+            else
+                Motion.Cancel(thisWidget, "sectionTitle")
+                Button.TextLabel.TextTransparency = Iris._config.TextTransparency
+                Motion.Play(thisWidget, "section", ChildContainer, {Size = UDim2.new(1, 0, 0, 0)}, 0.16, true, function()
+                    if thisWidget.BetaMotionGeneration ~= generation or not ChildContainer.Parent then return end
+                    ChildContainer.Visible = false
+                    ChildContainer.AutomaticSize = Enum.AutomaticSize.Y
+                    ChildContainer.Size = UDim2.fromScale(1, 0)
+                end)
+            end
         end,
         GenerateState = function(thisWidget: Types.CollapsingHeader)
             if thisWidget.state.isUncollapsed == nil then

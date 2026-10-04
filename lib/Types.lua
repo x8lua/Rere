@@ -504,6 +504,7 @@ export type Config = {
     DisplayOrderOffset: number,
     ZIndexOffset: number,
 
+    BetaAnimations: boolean,
     MouseDoubleClickTime: number,
     MouseDoubleClickMaxDist: number,
     MouseDragThreshold: number,
