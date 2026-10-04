@@ -33,6 +33,18 @@ end)
 
 See [`examples/executor_basic.lua`](examples/executor_basic.lua) and the [GitBook docs](docs/README.md) for the executor workflow.
 
+### Animated notifications
+
+[RereNotify](docs/notifications.md) is a standalone notification library with Rere-style gray panels, Arial typography, slide/fade animations, action buttons, and queued stacking. It does not require initializing Rere or Iris.
+
+```lua
+local RereNotify = assert(loadstring(game:HttpGet("https://raw.githubusercontent.com/x8lua/Rere/main/src/RereNotify.luau")))()
+local notifications = RereNotify.new({Position = "Center", Width = 360})
+notifications:Notify({Title = "Saved", Text = "Your configuration is ready.", Kind = "Success", Duration = 4})
+```
+
+Center notifications sit at 35% of viewport height and have no X button. The default bottom-right mode includes an X button. See the [complete guide](docs/notifications.md), [center demo](examples/notifications-center.luau), and [bottom-right demo](examples/notifications.luau).
+
 The complete Rere auto-parry integration and debug UI are available in [`examples/auto_parry_debug.lua`](examples/auto_parry_debug.lua). See the [auto-parry debugger guide](docs/auto-parry-debug.md) for the detection pipeline, controls, event log, troubleshooting matrix, and rollback procedure.
 
 <div align="center">

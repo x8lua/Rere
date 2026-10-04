@@ -20,6 +20,7 @@
   * [Images, progress, and plots](elements/media-visuals.md)
   * [Tables and columns](elements/tables.md)
 * [Public API](api.md)
+* [Animated notifications (RereNotify)](notifications.md)
 
 ## Examples
 

@@ -21,5 +21,6 @@ Windows, menus, tabs, collapsing sections, dropdowns, inputs, sliders, tables, p
 2. Copy the [Quickstart](quickstart.md).
 3. Browse [Elements overview](elements.md).
 4. Run the [full element example](examples.md).
+5. Add [animated notifications](notifications.md), including the centered variant.
 
 The source repository is [github.com/x8lua/Rere](https://github.com/x8lua/Rere).
