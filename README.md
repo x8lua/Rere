@@ -39,6 +39,8 @@ See [`examples/executor_basic.lua`](examples/executor_basic.lua) and the [GitBoo
 
 ### Animated notifications
 
+The retro script-error screen's [PxPlus IBM VGA8 font and bitmap atlas](assets/fonts/vga8/README.md) are available with attribution and CC BY-SA 4.0 license details.
+
 [RereNotify](docs/notifications.md) is a standalone notification library with Rere-style gray panels, Arial typography, slide/fade animations, action buttons, and queued stacking. It does not require initializing Rere or Iris.
 
 ```lua
