@@ -16,8 +16,9 @@ Native `Rere.Toggle({"Feature"}, {isChecked = enabled, keybind = key})` includes
 left-side keybind button, keyboard activation, and duplicate-key confirmation.
 See [the keybind toggle guide](docs/keybind-toggles.md).
 
-Beta instances stop on fatal UI errors and display a random crash card with a
-copyable report. External callback error bursts can use `Rere.ReportError`.
+Beta instances display persistent, compact notices for recoverable errors, with
+copyable reports and a per-error mute checkbox. Only critical failures stop the
+session. External callbacks can use `Rere.ReportError`.
 See [the crash handler guide](docs/crash-handler.md) and the
 [15 crash cards](lib/CrashCards.lua).
 

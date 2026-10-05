@@ -34,17 +34,18 @@ function Iris.ShowFatalError(errMessage: any)
 end
 function Iris.ConfigureCrashHandler(options)
     options = options or {}
-    for _, name in {"WindowSeconds", "RepeatThreshold", "TotalThreshold"} do
+    for _, name in {"UnusableSeconds"} do
         if options[name] ~= nil then
             assert(type(options[name]) == "number" and options[name] > 0, name .. " must be positive")
         end
     end
     Internal._crashOptions = options
 end
-function Iris.ReportError(errMessage: any): boolean
-    return Internal._RecordRuntimeError(errMessage)
+function Iris.ReportError(errMessage: any, critical: boolean?): boolean
+    return Internal._RecordRuntimeError(errMessage, critical)
 end
 function Iris.DismissCrash()
+    Internal._DismissNotices()
     if Internal._crashPopup then Internal._crashPopup:Destroy(); Internal._crashPopup = nil end
 end
 local function isGuiParent(container: unknown): boolean
@@ -188,6 +189,7 @@ function Iris.Shutdown()
     if Internal._shutdown then return end
     Internal._started = false
     Internal._shutdown = true
+    Internal._DismissNotices()
     if Internal._keybinds then pcall(Internal._keybinds.Cleanup) end
 
     if Internal._eventConnection then

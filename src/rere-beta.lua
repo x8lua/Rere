@@ -2274,38 +2274,41 @@ sources[nodes['CrashPopup']] = function(script)
     -- This surface must survive shutting down the failed immediate-mode renderer.
     local Cards = require(script.Parent.CrashCards)
 
-    return function(Iris, reason, options)
+    return function(Iris, reason, options, notice)
+        local critical = notice == nil
         local card = Cards[Random.new():NextInteger(1, #Cards)]
         local report = table.concat({
-            "Rere beta crash report",
+            critical and "Rere beta critical crash report" or "Rere beta recoverable error report",
             "error code: " .. card.code,
             "library version: " .. tostring(Iris.BetaVersion or Iris.Version),
             "time (UTC): " .. os.date("!%Y-%m-%dT%H:%M:%SZ"),
+            critical and "This session has terminated." or "This session is still running.",
             "", reason,
         }, "\n")
         local player = game:GetService("Players").LocalPlayer
         local parent = player and player:FindFirstChildOfClass("PlayerGui")
         if not parent then parent = game:GetService("CoreGui") end
-        local existing = parent:FindFirstChild("RereCrashPopup")
+        local name = critical and "RereCrashPopup" or "RereErrorNotice"
+        local existing = parent:FindFirstChild(name)
         if existing then existing:Destroy() end
 
         local config = Iris.Internal._config
         local gui = Instance.new("ScreenGui")
-        gui.Name = "RereCrashPopup"
+        gui.Name = name
         gui.ResetOnSpawn = false
         gui.IgnoreGuiInset = true
         gui.DisplayOrder = 1000000000
         gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         local panel = Instance.new("Frame")
         panel.Name = "CrashWindow"
-        panel.AnchorPoint = Vector2.new(0.5, 0.5)
-        panel.Position = UDim2.fromScale(0.5, 0.5)
+        panel.AnchorPoint = critical and Vector2.new(0.5, 0.5) or Vector2.new(1, 1)
+        panel.Position = critical and UDim2.fromScale(0.5, 0.5) or UDim2.new(1, -12, 1, -12)
         panel.Size = UDim2.new(1, -24, 1, -24)
         panel.BackgroundColor3 = config.WindowBgColor or Color3.fromRGB(32, 32, 32)
         panel.BorderSizePixel = 0
         panel.Parent = gui
         local constraint = Instance.new("UISizeConstraint")
-        constraint.MaxSize = Vector2.new(500, 410)
+        constraint.MaxSize = critical and Vector2.new(500, 440) or Vector2.new(360, 300)
         constraint.Parent = panel
         local stroke = Instance.new("UIStroke")
         stroke.Color = config.BorderColor or Color3.fromRGB(76, 76, 76)
@@ -2318,17 +2321,31 @@ sources[nodes['CrashPopup']] = function(script)
         title.Size = UDim2.new(1, 0, 0, 32)
         title.BackgroundColor3 = config.TitleBgActiveColor or Color3.fromRGB(55, 55, 55)
         title.BorderSizePixel = 0
-        title.Text = "  Rere / crash report"
+        title.Text = critical and "  Rere / crash report" or "  Rere / error"
         title.TextColor3 = config.TextColor or Color3.fromRGB(240, 240, 240)
         title.Font = Enum.Font.Code
         title.TextSize = 14
         title.TextXAlignment = Enum.TextXAlignment.Left
         title.Parent = panel
 
+        if critical then
+            local status = Instance.new("TextLabel")
+            status.Name = "SessionStatus"
+            status.Position = UDim2.fromOffset(12, 42)
+            status.Size = UDim2.new(1, -24, 0, 22)
+            status.BackgroundTransparency = 1
+            status.Font = Enum.Font.Code
+            status.TextSize = 14
+            status.TextColor3 = Color3.fromRGB(255, 172, 135)
+            status.TextXAlignment = Enum.TextXAlignment.Left
+            status.Text = "This session has terminated."
+            status.Parent = panel
+        end
+
         local content = Instance.new("ScrollingFrame")
         content.Name = "Report"
-        content.Position = UDim2.fromOffset(12, 44)
-        content.Size = UDim2.new(1, -24, 1, -104)
+        content.Position = UDim2.fromOffset(12, critical and 76 or 44)
+        content.Size = UDim2.new(1, -24, 1, critical and -136 or -146)
         content.BackgroundTransparency = 1
         content.BorderSizePixel = 0
         content.ScrollBarThickness = 4
@@ -2361,6 +2378,48 @@ sources[nodes['CrashPopup']] = function(script)
         text("Code", "error code: " .. card.code, Color3.fromRGB(255, 172, 135))
         if card.detail ~= "" then text("Detail", card.detail) end
         text("Reason", reason, Color3.fromRGB(168, 168, 168))
+        if notice then
+            local count = text("Occurrences", "Occurrences: " .. tostring(notice.count), Color3.fromRGB(168, 168, 168))
+            notice.UpdateCount = function(value)
+                if count.Parent then count.Text = "Occurrences: " .. tostring(value) end
+            end
+            local mute = Instance.new("TextButton")
+            mute.Name = "MuteThisError"
+            mute.Position = UDim2.new(0, 12, 1, -92)
+            mute.Size = UDim2.new(1, -24, 0, 36)
+            mute.BackgroundTransparency = 1
+            mute.Text = ""
+            mute.Parent = panel
+            local box = Instance.new("TextLabel")
+            box.Name = "Check"
+            box.Position = UDim2.new(0, 0, 0.5, -9)
+            box.Size = UDim2.fromOffset(18, 18)
+            box.BackgroundColor3 = config.FrameBgColor or Color3.fromRGB(58, 58, 58)
+            box.BorderSizePixel = 0
+            box.Font = Enum.Font.Code
+            box.TextSize = 14
+            box.TextColor3 = title.TextColor3
+            box.Text = ""
+            box.Parent = mute
+            local caption = Instance.new("TextLabel")
+            caption.Name = "Caption"
+            caption.Position = UDim2.fromOffset(26, 0)
+            caption.Size = UDim2.new(1, -26, 1, 0)
+            caption.BackgroundTransparency = 1
+            caption.Font = Enum.Font.Code
+            caption.TextSize = 12
+            caption.TextColor3 = title.TextColor3
+            caption.TextWrapped = true
+            caption.TextXAlignment = Enum.TextXAlignment.Left
+            caption.Text = "Don't remind me for this error again"
+            caption.Parent = mute
+            local checked = false
+            mute.Activated:Connect(function()
+                checked = not checked
+                box.Text = checked and "X" or ""
+                notice.OnMute(checked)
+            end)
+        end
 
         local footer = Instance.new("Frame")
         footer.Name = "Actions"
@@ -2373,8 +2432,8 @@ sources[nodes['CrashPopup']] = function(script)
         buttons.FillDirection = Enum.FillDirection.Horizontal
         buttons.Padding = UDim.new(0, 8)
         buttons.Parent = footer
-        local action = options.Actions and options.Actions[card.code]
-        if not action and card.restart then action = options.OnRestart end
+        local action = critical and options.Actions and options.Actions[card.code]
+        if critical and not action and card.restart then action = options.OnRestart end
         local count = type(action) == "function" and card.action and 3 or 2
         local function button(name, caption, callback)
             local item = Instance.new("TextButton")
@@ -2409,7 +2468,10 @@ sources[nodes['CrashPopup']] = function(script)
                 if ok then gui:Destroy() else text("RestartError", tostring(err)) end
             end)
         end
-        button("Close", "close", function() gui:Destroy() end)
+        button("Close", "close", function()
+            gui:Destroy()
+            if notice and notice.OnDismiss then notice.OnDismiss() end
+        end)
         gui.Parent = parent
         return gui, card
     end
@@ -2467,38 +2529,70 @@ sources[nodes['Internal']] = function(script)
         
         Internal._errored = false
         Internal._errorReason = ""
-        Internal._runtimeErrors = {}
-        Internal._runtimeErrorTimes = {}
         Internal._crashOptions = {}
         Internal._crashPopup = nil
+        Internal._notice = nil
+        Internal._noticeQueue = {}
+        Internal._noticeEntries = {}
+        Internal._mutedErrors = {}
+        Internal._unusableSince = nil
+        Internal._unusableFrames = 0
 
-        function Internal._RecordRuntimeError(errMessage: any): boolean
+        function Internal._DismissNotices()
+            local notice = Internal._notice
+            Internal._notice = nil
+            table.clear(Internal._noticeQueue)
+            table.clear(Internal._noticeEntries)
+            if notice and notice.gui then notice.gui:Destroy() end
+        end
+
+        local function showNextNotice()
+            if Internal._notice or Internal._shutdown then return end
+            local entry
+            while #Internal._noticeQueue > 0 do
+                local nextEntry = table.remove(Internal._noticeQueue, 1)
+                if not Internal._mutedErrors[nextEntry.key] then
+                    entry = nextEntry
+                    break
+                end
+                Internal._noticeEntries[nextEntry.key] = nil
+            end
+            if not entry then return end
+            Internal._notice = entry
+            entry.OnMute = function(muted)
+                Internal._mutedErrors[entry.key] = muted or nil
+            end
+            entry.OnDismiss = function()
+                if Internal._notice ~= entry then return end
+                Internal._notice = nil
+                Internal._noticeEntries[entry.key] = nil
+                showNextNotice()
+            end
+            entry.gui, entry.card = CrashPopup(Iris, entry.reason, Internal._crashOptions, entry)
+        end
+
+        function Internal._RecordRuntimeError(errMessage: any, critical: boolean?): boolean
             if Internal._errored then return true end
-            if Internal._shutdown then return false end
-            if not Internal._started then return false end
+            if Internal._shutdown or not Internal._started then return false end
             local reason = tostring(errMessage or "Unknown Rere runtime error")
-            local current = os.clock()
-            local options = Internal._crashOptions
-            local window = options.WindowSeconds or 2
-            -- Prune both signatures and the aggregate window, including alternating errors.
-            local times = Internal._runtimeErrorTimes
-            for index = #times, 1, -1 do
-                if current - times[index] > window then table.remove(times, index) end
-            end
-            table.insert(times, current)
-            for signature, entry in pairs(Internal._runtimeErrors) do
-                if current - entry.started > window then Internal._runtimeErrors[signature] = nil end
-            end
-            local entry = Internal._runtimeErrors[reason]
-            if not entry then
-                entry = {started = current, count = 0}
-                Internal._runtimeErrors[reason] = entry
-            end
-            entry.count += 1
-            if entry.count >= (options.RepeatThreshold or 3) or #times >= (options.TotalThreshold or 6) then
+            if critical then
                 Internal._HandleFatalError(reason)
                 return true
             end
+            -- The failing source line identifies the error; changing caller traces do not.
+            local key = reason:match("^[^\r\n]+") or reason
+            if Internal._mutedErrors[key] then return false end
+            local existing = Internal._noticeEntries[key]
+            if existing then
+                existing.count += 1
+                if existing.UpdateCount then existing.UpdateCount(existing.count) end
+                return false
+            end
+            if #Internal._noticeQueue >= 32 then return false end
+            local entry = {key = key, reason = reason, count = 1}
+            Internal._noticeEntries[key] = entry
+            table.insert(Internal._noticeQueue, entry)
+            showNextNotice()
             return false
         end
 
@@ -2519,20 +2613,87 @@ sources[nodes['Internal']] = function(script)
             Internal._crashPopup, Internal._crashCard = CrashPopup(Iris, Internal._errorReason, options)
         end
 
-        Internal._cycleCoroutine = coroutine.create(function()
-            while Internal._started do
-                for _, callback in Internal._connectedFunctions do
-                    debug.profilebegin("Iris/Connection")
-                    local status, _error: string = xpcall(callback, debug.traceback)
-                    debug.profileend()
-                    if not status then
-                        Internal._stackIndex = 1
-                        coroutine.yield(false, _error)
-                    end
-                end
-                coroutine.yield(true)
+        function Internal._ResetRenderContext()
+            Internal._stackIndex = 1
+            table.clear(Internal._IDStack)
+            Internal._IDStack[1] = "R"
+            table.clear(Internal._pushedIds)
+            Internal._nextWidgetId = nil
+            Internal._config = Internal._rootConfig
+            Internal._refreshLevel = 1
+            Internal._refreshCounter = 0
+            table.clear(Internal._refreshStack)
+            Internal._lastWidget = Internal._rootWidget
+        end
+
+        local function trackUnusableFrame(reason, usable)
+            if usable then
+                Internal._unusableSince = nil
+                Internal._unusableFrames = 0
+                return
             end
-        end)
+            Internal._unusableSince = Internal._unusableSince or os.clock()
+            Internal._unusableFrames += 1
+            if Internal._unusableFrames >= 3
+                and os.clock() - Internal._unusableSince >= (Internal._crashOptions.UnusableSeconds or 5) then
+                Internal._HandleFatalError("The entire UI could not recover.\n" .. tostring(reason))
+            end
+        end
+
+        local function hasUsableControls()
+            if type(Internal._VDOM) ~= "table" then return false end
+            for _, widget in Internal._VDOM do
+                local class = Internal._widgets[widget.type]
+                local interactive = class and ((class.hasState and not class.hasChildren)
+                    or (class.Events and class.Events.clicked))
+                if interactive and widget.Instance and widget.Instance.Parent
+                    and widget.Instance:IsA("GuiObject") and widget.Instance.Visible then
+                    local visible = true
+                    local ancestor = widget.Instance.Parent
+                    while ancestor and ancestor ~= Internal.parentInstance do
+                        if (ancestor:IsA("GuiObject") and not ancestor.Visible)
+                            or (ancestor:IsA("ScreenGui") and not ancestor.Enabled) then
+                            visible = false
+                            break
+                        end
+                        ancestor = ancestor.Parent
+                    end
+                    if visible then return true end
+                end
+            end
+            return false
+        end
+
+        local function createCycleCoroutine()
+            return coroutine.create(function()
+                while Internal._started do
+                    local successful = 0
+                    local attempted = 0
+                    local lastError
+                    for _, callback in Internal._connectedFunctions do
+                        if Internal._shutdown then break end
+                        attempted += 1
+                        debug.profilebegin("Iris/Connection")
+                        local status, err = xpcall(callback, debug.traceback)
+                        debug.profileend()
+                        if status and (Internal._stackIndex ~= 1 or #Internal._pushedIds ~= 0
+                            or Internal._refreshLevel ~= 1) then
+                            status = false
+                            err = "Unbalanced Rere Window/End, PushId/PopId or PushConfig/PopConfig calls."
+                        end
+                        if status then
+                            successful += 1
+                        else
+                            lastError = err
+                            Internal._ResetRenderContext()
+                            Internal._RecordRuntimeError(err)
+                        end
+                    end
+                    coroutine.yield(true, {successful = successful, attempted = attempted, reason = lastError})
+                end
+            end)
+        end
+        Internal._cycleCoroutine = createCycleCoroutine()
 
         local StateClass = {}
         StateClass.__index = StateClass
@@ -2549,12 +2710,14 @@ sources[nodes['Internal']] = function(script)
             self.lastChangeTick = Iris.Internal._cycleTick
             for _, thisWidget: Types.Widget in self.ConnectedWidgets do
                 if thisWidget.lastCycleTick ~= -1 then
-                    Internal._widgets[thisWidget.type].UpdateState(thisWidget)
+                    local ok, err = xpcall(Internal._widgets[thisWidget.type].UpdateState, debug.traceback, thisWidget)
+                    if not ok then Internal._RecordRuntimeError(err) end
                 end
             end
 
             for _, callback in self.ConnectedFunctions do
-                callback(newValue)
+                local ok, err = xpcall(callback, debug.traceback, newValue)
+                if not ok then Internal._RecordRuntimeError(err) end
             end
             return self.value
         end
@@ -2597,7 +2760,7 @@ sources[nodes['Internal']] = function(script)
                 for _, callback in Internal._postCycleCallbacks do
                     if Internal._shutdown then return end
                     local ok, err = xpcall(callback, debug.traceback)
-                    if not ok then Internal._HandleFatalError(err); return end
+                    if not ok then Internal._RecordRuntimeError(err) end
                 end
             end)
             if Internal._shutdown then return end
@@ -2626,26 +2789,39 @@ sources[nodes['Internal']] = function(script)
             if coroutineStatus == "suspended" then
                 local resumed, success, result = coroutine.resume(Internal._cycleCoroutine)
                 if not resumed or success == false then
-                    Internal._HandleFatalError(resumed and result or success)
+                    local reason = resumed and result or success
+                    Internal._RecordRuntimeError(reason)
+                    Internal._ResetRenderContext()
+                    Internal._cycleCoroutine = createCycleCoroutine()
+                    trackUnusableFrame(reason, hasUsableControls())
                     return
                 end
+                if type(result) == "table" then
+                    trackUnusableFrame(result.reason, result.attempted == 0 or result.successful > 0 or hasUsableControls())
+                end
             elseif coroutineStatus == "running" then
-                Internal._HandleFatalError("Iris cycleCoroutine took too long to yield. Connected functions should not yield.")
+                local reason = "Rere UI callback is still waiting. Connected functions should not yield."
+                Internal._RecordRuntimeError(reason)
+                trackUnusableFrame(reason, hasUsableControls())
                 return
             else
-                Internal._HandleFatalError("Unrecoverable Rere state (coroutine status: " .. tostring(coroutineStatus) .. ")")
+                local reason = "Rere renderer needs recovery (coroutine status: " .. tostring(coroutineStatus) .. ")"
+                Internal._RecordRuntimeError(reason)
+                Internal._ResetRenderContext()
+                Internal._cycleCoroutine = createCycleCoroutine()
+                trackUnusableFrame(reason, hasUsableControls())
                 return
             end
 
             if Internal._stackIndex ~= 1 then
-                Internal._stackIndex = 1
-                Internal._HandleFatalError("Too few calls to Iris.End().")
+                Internal._ResetRenderContext()
+                Internal._RecordRuntimeError("Too few calls to Iris.End().")
                 return
             end
 
             if #Internal._pushedIds ~= 0 then
-                table.clear(Internal._pushedIds)
-                Internal._HandleFatalError("Too few calls to Iris.PopId().")
+                Internal._ResetRenderContext()
+                Internal._RecordRuntimeError("Too few calls to Iris.PopId().")
                 return
             end
         end
@@ -2653,7 +2829,12 @@ sources[nodes['Internal']] = function(script)
         function Internal._cycle(deltaTime: number)
             if Internal._shutdown or Internal._errored then return end
             local ok, err = xpcall(cycle, debug.traceback, deltaTime)
-            if not ok then Internal._HandleFatalError(err) end
+            if not ok then
+                Internal._ResetRenderContext()
+                Internal._RecordRuntimeError(err)
+                Internal._globalRefreshRequested = true
+                trackUnusableFrame(err, hasUsableControls())
+            end
         end
 
         function Internal._NoOp() end
@@ -3754,7 +3935,7 @@ sources[nodes['Types']] = function(script)
         Init: (parentInstance: BasePlayerGui | GuiBase2d?, eventConnection: (RBXScriptSignal | (() -> number) | false)?, allowMultipleInits: boolean?) -> Iris,
         Shutdown: () -> (),
         ConfigureCrashHandler: (options: {[string]: any}?) -> (),
-        ReportError: (errMessage: any) -> boolean,
+        ReportError: (errMessage: any, critical: boolean?) -> boolean,
         ShowFatalError: (errMessage: any) -> (),
         DismissCrash: () -> (),
         Connect: (self: Iris, callback: () -> ()) -> () -> (),
@@ -6649,17 +6830,18 @@ sources[nodes['Iris']] = function(script)
     end
     function Iris.ConfigureCrashHandler(options)
         options = options or {}
-        for _, name in {"WindowSeconds", "RepeatThreshold", "TotalThreshold"} do
+        for _, name in {"UnusableSeconds"} do
             if options[name] ~= nil then
                 assert(type(options[name]) == "number" and options[name] > 0, name .. " must be positive")
             end
         end
         Internal._crashOptions = options
     end
-    function Iris.ReportError(errMessage: any): boolean
-        return Internal._RecordRuntimeError(errMessage)
+    function Iris.ReportError(errMessage: any, critical: boolean?): boolean
+        return Internal._RecordRuntimeError(errMessage, critical)
     end
     function Iris.DismissCrash()
+        Internal._DismissNotices()
         if Internal._crashPopup then Internal._crashPopup:Destroy(); Internal._crashPopup = nil end
     end
     local function isGuiParent(container: unknown): boolean
@@ -6803,6 +6985,7 @@ sources[nodes['Iris']] = function(script)
         if Internal._shutdown then return end
         Internal._started = false
         Internal._shutdown = true
+        Internal._DismissNotices()
         if Internal._keybinds then pcall(Internal._keybinds.Cleanup) end
 
         if Internal._eventConnection then
@@ -15341,23 +15524,29 @@ sources[nodes['widgets']] = function(script)
             end
         end
 
+        local function invoke(callback, ...)
+            if Iris._shutdown then return end
+            local ok, err = xpcall(callback, debug.traceback, ...)
+            if not ok then Iris._RecordRuntimeError(err) end
+        end
+
         function widgets.applyButtonClick(thisInstance: GuiButton, callback: () -> ())
             thisInstance.MouseButton1Click:Connect(function()
-                callback()
+                invoke(callback)
             end)
         end
 
         function widgets.applyButtonDown(thisInstance: GuiButton, callback: (x: number, y: number) -> ())
             thisInstance.MouseButton1Down:Connect(function(x: number, y: number)
                 local position = Vector2.new(x, y) - widgets.MouseOffset
-                callback(position.X, position.Y)
+                invoke(callback, position.X, position.Y)
             end)
         end
 
         function widgets.applyInputDown(thisInstance: GuiButton, callback: (input: InputObject) -> ())
             thisInstance.InputBegan:Connect(function(input: InputObject)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    callback(input)
+                    invoke(callback, input)
                 end
             end)
         end
@@ -15365,33 +15554,33 @@ sources[nodes['widgets']] = function(script)
         function widgets.applyMouseEnter(thisInstance: GuiObject, callback: (x: number, y: number) -> ())
             thisInstance.MouseEnter:Connect(function(x: number, y: number)
                 local position = Vector2.new(x, y) - widgets.MouseOffset
-                callback(position.X, position.Y)
+                invoke(callback, position.X, position.Y)
             end)
         end
 
         function widgets.applyMouseMoved(thisInstance: GuiObject, callback: (x: number, y: number) -> ())
             thisInstance.MouseMoved:Connect(function(x: number, y: number)
                 local position = Vector2.new(x, y) - widgets.MouseOffset
-                callback(position.X, position.Y)
+                invoke(callback, position.X, position.Y)
             end)
         end
 
         function widgets.applyMouseLeave(thisInstance: GuiObject, callback: (x: number, y: number) -> ())
             thisInstance.MouseLeave:Connect(function(x: number, y: number)
                 local position = Vector2.new(x, y) - widgets.MouseOffset
-                callback(position.X, position.Y)
+                invoke(callback, position.X, position.Y)
             end)
         end
 
         function widgets.applyInputBegan(thisInstance: GuiButton, callback: (input: InputObject) -> ())
             thisInstance.InputBegan:Connect(function(...)
-                callback(...)
+                invoke(callback, ...)
             end)
         end
 
         function widgets.applyInputEnded(thisInstance: GuiButton, callback: (input: InputObject) -> ())
             thisInstance.InputEnded:Connect(function(...)
-                callback(...)
+                invoke(callback, ...)
             end)
         end
 
@@ -15403,7 +15592,9 @@ sources[nodes['widgets']] = function(script)
 
         function widgets.registerEvent(event: string, callback: (...any) -> ())
             table.insert(Iris._initFunctions, function()
-                table.insert(Iris._connections, widgets.UserInputService[event]:Connect(callback))
+                table.insert(Iris._connections, widgets.UserInputService[event]:Connect(function(...)
+                    invoke(callback, ...)
+                end))
             end)
         end
 
@@ -15531,5 +15722,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261005001"
+RereBeta.BetaVersion = "20261005002"
 return RereBeta

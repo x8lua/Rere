@@ -1,59 +1,68 @@
-# Rere beta crash handler
+# Rere beta error and crash handler
 
-Rere beta shuts down a failed UI instance and opens an independent crash window.
-The window does not run the damaged immediate-mode renderer. It randomly picks
-one of the 15 entries in [CrashCards.lua](../lib/CrashCards.lua) once per crash.
+Rere displays a compact error notice for recoverable failures. The running
+instance is preserved. Only critical failures shut down the session and show
+a centered crash report containing **This session has terminated.**
 
-Every card has a **copy error** button. The report includes the card code, library
-version, UTC time and original error/traceback. Card codes are playful labels;
-they do not diagnose the actual cause. The original error is the diagnostic.
+Both surfaces pick from the same [15 crash cards](../lib/CrashCards.lua).
+Every card has **copy error**, including the code, version, UTC time and original
+error/traceback. The playful card code is not a diagnosis of the actual cause.
 If the executor has no clipboard API, the button shows **clipboard unavailable**.
 
-## Consumer cleanup
+## Recoverable errors
 
-Rere owns its UI, keybind listeners, widget animations and connections. Game
-features belong to the consumer, which must register its own cleanup:
+`Rere.ReportError(err)` shows a small, non-modal notice. It stays open until Close
+is clicked; it has no timeout. Repeated reports of the same failing source line
+update its occurrence count and retain its original card. Different errors are
+queued, with up to 32 waiting reports so a flood cannot allocate unlimited UI.
+
+The **Don't remind me for this error again** checkbox mutes that error for the
+current library session. It leaves the current notice and application open.
+Unticking restores reminders. Closing a muted notice keeps it muted.
+Other errors and critical failures remain visible. Reloading starts a new session.
+
+```lua
+local ok, err = xpcall(update, debug.traceback)
+if not ok then Rere.ReportError(err) end
+```
+
+Repeating a feature error never makes it critical merely because of its count.
+No unrelated Roblox or executor errors are monitored.
+
+## Critical failures
+
+Use `Rere.ReportError(err, true)` or `Rere.ShowFatalError(err)` only when the
+consumer knows the whole application cannot continue, such as failed startup.
+
+For renderer failures, Rere restores Window/End, ID and config stacks and
+continues with the other callbacks and next frame. State and input callbacks
+are isolated so one failed control does not stop every other control.
+
+Automatic termination requires at least three failed frames and five continuous
+seconds with neither a successful render callback nor a visible interactive
+widget in the current frame. A recovered usable frame resets the timer.
+An incompatible GUI parent that cannot display any UI is immediately critical.
+This is a UI availability check; feature-specific failures must be classified
+by the consumer when they affect the entire application.
 
 ```lua
 Rere.ConfigureCrashHandler({
     OnTerminate = function(reason)
         app.Stop() -- disconnect features, restore hooks, destroy consumer UI
     end,
-    WindowSeconds = 2,
-    RepeatThreshold = 3,
-    TotalThreshold = 6,
+    UnusableSeconds = 5,
 })
 ```
 
-Rere calls Shutdown first, then OnTerminate once, then opens the crash popup in
-PlayerGui, outside the consumer's UI host. Shutdown is idempotent and leaves the
-report visible. Close dismisses the report. Rerunning a consumer can call
-`Rere.DismissCrash()` on its previous instance.
+Rere calls Shutdown first, then OnTerminate once, then creates an independent
+crash popup outside the consumer's UI host. Shutdown is idempotent.
+Critical failures cannot be muted. `Rere.DismissCrash()` dismisses both types
+of report without changing the per-error mute choices.
 
-## External callback errors
+## Optional critical actions
 
-Fatal renderer/callback errors stop Rere immediately. For external callbacks
-that can recover from occasional failures, report each error:
-
-```lua
-local ok, err = xpcall(update, debug.traceback)
-if not ok then
-    if Rere.ReportError(err) then return end
-    warn(err)
-end
-```
-
-ReportError returns true when the instance has crashed. Defaults stop after
-three identical reports within two seconds, or six total reports within two
-seconds. Old reports expire. It does not listen to unrelated Roblox errors.
-Manual-cycle consumers continue to use Internal._cycle; it now catches errors
-from the renderer and exits after shutdown.
-
-## Optional actions
-
-The card data preserves the extra action captions supplied for each card.
-Only configured actions are shown, so buttons never pretend to restart a
-terminated consumer:
+The card data preserves the extra captions supplied for each card. Only
+configured critical actions are shown:
 
 ```lua
 Rere.ConfigureCrashHandler({
@@ -69,7 +78,6 @@ Rere.ConfigureCrashHandler({
 })
 ```
 
-OnRestart is used for the four restart/retry cards. Actions keyed by card code
-override that callback and can implement the other playful captions.
-Restart never resumes the failed renderer. A failed action keeps the report
-open and adds its error.
+OnRestart handles the four restart/retry cards. Code-specific Actions override
+it. These callbacks are not used by recoverable notices. Restart never resumes
+a terminated renderer. Failed actions leave the crash report open.

@@ -268,23 +268,29 @@ return function(Iris: Types.Internal)
         end
     end
 
+    local function invoke(callback, ...)
+        if Iris._shutdown then return end
+        local ok, err = xpcall(callback, debug.traceback, ...)
+        if not ok then Iris._RecordRuntimeError(err) end
+    end
+
     function widgets.applyButtonClick(thisInstance: GuiButton, callback: () -> ())
         thisInstance.MouseButton1Click:Connect(function()
-            callback()
+            invoke(callback)
         end)
     end
 
     function widgets.applyButtonDown(thisInstance: GuiButton, callback: (x: number, y: number) -> ())
         thisInstance.MouseButton1Down:Connect(function(x: number, y: number)
             local position = Vector2.new(x, y) - widgets.MouseOffset
-            callback(position.X, position.Y)
+            invoke(callback, position.X, position.Y)
         end)
     end
 
     function widgets.applyInputDown(thisInstance: GuiButton, callback: (input: InputObject) -> ())
         thisInstance.InputBegan:Connect(function(input: InputObject)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                callback(input)
+                invoke(callback, input)
             end
         end)
     end
@@ -292,33 +298,33 @@ return function(Iris: Types.Internal)
     function widgets.applyMouseEnter(thisInstance: GuiObject, callback: (x: number, y: number) -> ())
         thisInstance.MouseEnter:Connect(function(x: number, y: number)
             local position = Vector2.new(x, y) - widgets.MouseOffset
-            callback(position.X, position.Y)
+            invoke(callback, position.X, position.Y)
         end)
     end
 
     function widgets.applyMouseMoved(thisInstance: GuiObject, callback: (x: number, y: number) -> ())
         thisInstance.MouseMoved:Connect(function(x: number, y: number)
             local position = Vector2.new(x, y) - widgets.MouseOffset
-            callback(position.X, position.Y)
+            invoke(callback, position.X, position.Y)
         end)
     end
 
     function widgets.applyMouseLeave(thisInstance: GuiObject, callback: (x: number, y: number) -> ())
         thisInstance.MouseLeave:Connect(function(x: number, y: number)
             local position = Vector2.new(x, y) - widgets.MouseOffset
-            callback(position.X, position.Y)
+            invoke(callback, position.X, position.Y)
         end)
     end
 
     function widgets.applyInputBegan(thisInstance: GuiButton, callback: (input: InputObject) -> ())
         thisInstance.InputBegan:Connect(function(...)
-            callback(...)
+            invoke(callback, ...)
         end)
     end
 
     function widgets.applyInputEnded(thisInstance: GuiButton, callback: (input: InputObject) -> ())
         thisInstance.InputEnded:Connect(function(...)
-            callback(...)
+            invoke(callback, ...)
         end)
     end
 
@@ -330,7 +336,9 @@ return function(Iris: Types.Internal)
 
     function widgets.registerEvent(event: string, callback: (...any) -> ())
         table.insert(Iris._initFunctions, function()
-            table.insert(Iris._connections, widgets.UserInputService[event]:Connect(callback))
+            table.insert(Iris._connections, widgets.UserInputService[event]:Connect(function(...)
+                invoke(callback, ...)
+            end))
         end)
     end
 

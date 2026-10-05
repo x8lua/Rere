@@ -48,38 +48,70 @@ return function(Iris: Types.Iris): Types.Internal
     
     Internal._errored = false
     Internal._errorReason = ""
-    Internal._runtimeErrors = {}
-    Internal._runtimeErrorTimes = {}
     Internal._crashOptions = {}
     Internal._crashPopup = nil
+    Internal._notice = nil
+    Internal._noticeQueue = {}
+    Internal._noticeEntries = {}
+    Internal._mutedErrors = {}
+    Internal._unusableSince = nil
+    Internal._unusableFrames = 0
 
-    function Internal._RecordRuntimeError(errMessage: any): boolean
+    function Internal._DismissNotices()
+        local notice = Internal._notice
+        Internal._notice = nil
+        table.clear(Internal._noticeQueue)
+        table.clear(Internal._noticeEntries)
+        if notice and notice.gui then notice.gui:Destroy() end
+    end
+
+    local function showNextNotice()
+        if Internal._notice or Internal._shutdown then return end
+        local entry
+        while #Internal._noticeQueue > 0 do
+            local nextEntry = table.remove(Internal._noticeQueue, 1)
+            if not Internal._mutedErrors[nextEntry.key] then
+                entry = nextEntry
+                break
+            end
+            Internal._noticeEntries[nextEntry.key] = nil
+        end
+        if not entry then return end
+        Internal._notice = entry
+        entry.OnMute = function(muted)
+            Internal._mutedErrors[entry.key] = muted or nil
+        end
+        entry.OnDismiss = function()
+            if Internal._notice ~= entry then return end
+            Internal._notice = nil
+            Internal._noticeEntries[entry.key] = nil
+            showNextNotice()
+        end
+        entry.gui, entry.card = CrashPopup(Iris, entry.reason, Internal._crashOptions, entry)
+    end
+
+    function Internal._RecordRuntimeError(errMessage: any, critical: boolean?): boolean
         if Internal._errored then return true end
-        if Internal._shutdown then return false end
-        if not Internal._started then return false end
+        if Internal._shutdown or not Internal._started then return false end
         local reason = tostring(errMessage or "Unknown Rere runtime error")
-        local current = os.clock()
-        local options = Internal._crashOptions
-        local window = options.WindowSeconds or 2
-        -- Prune both signatures and the aggregate window, including alternating errors.
-        local times = Internal._runtimeErrorTimes
-        for index = #times, 1, -1 do
-            if current - times[index] > window then table.remove(times, index) end
-        end
-        table.insert(times, current)
-        for signature, entry in pairs(Internal._runtimeErrors) do
-            if current - entry.started > window then Internal._runtimeErrors[signature] = nil end
-        end
-        local entry = Internal._runtimeErrors[reason]
-        if not entry then
-            entry = {started = current, count = 0}
-            Internal._runtimeErrors[reason] = entry
-        end
-        entry.count += 1
-        if entry.count >= (options.RepeatThreshold or 3) or #times >= (options.TotalThreshold or 6) then
+        if critical then
             Internal._HandleFatalError(reason)
             return true
         end
+        -- The failing source line identifies the error; changing caller traces do not.
+        local key = reason:match("^[^\r\n]+") or reason
+        if Internal._mutedErrors[key] then return false end
+        local existing = Internal._noticeEntries[key]
+        if existing then
+            existing.count += 1
+            if existing.UpdateCount then existing.UpdateCount(existing.count) end
+            return false
+        end
+        if #Internal._noticeQueue >= 32 then return false end
+        local entry = {key = key, reason = reason, count = 1}
+        Internal._noticeEntries[key] = entry
+        table.insert(Internal._noticeQueue, entry)
+        showNextNotice()
         return false
     end
 
@@ -100,20 +132,87 @@ return function(Iris: Types.Iris): Types.Internal
         Internal._crashPopup, Internal._crashCard = CrashPopup(Iris, Internal._errorReason, options)
     end
 
-    Internal._cycleCoroutine = coroutine.create(function()
-        while Internal._started do
-            for _, callback in Internal._connectedFunctions do
-                debug.profilebegin("Iris/Connection")
-                local status, _error: string = xpcall(callback, debug.traceback)
-                debug.profileend()
-                if not status then
-                    Internal._stackIndex = 1
-                    coroutine.yield(false, _error)
-                end
-            end
-            coroutine.yield(true)
+    function Internal._ResetRenderContext()
+        Internal._stackIndex = 1
+        table.clear(Internal._IDStack)
+        Internal._IDStack[1] = "R"
+        table.clear(Internal._pushedIds)
+        Internal._nextWidgetId = nil
+        Internal._config = Internal._rootConfig
+        Internal._refreshLevel = 1
+        Internal._refreshCounter = 0
+        table.clear(Internal._refreshStack)
+        Internal._lastWidget = Internal._rootWidget
+    end
+
+    local function trackUnusableFrame(reason, usable)
+        if usable then
+            Internal._unusableSince = nil
+            Internal._unusableFrames = 0
+            return
         end
-    end)
+        Internal._unusableSince = Internal._unusableSince or os.clock()
+        Internal._unusableFrames += 1
+        if Internal._unusableFrames >= 3
+            and os.clock() - Internal._unusableSince >= (Internal._crashOptions.UnusableSeconds or 5) then
+            Internal._HandleFatalError("The entire UI could not recover.\n" .. tostring(reason))
+        end
+    end
+
+    local function hasUsableControls()
+        if type(Internal._VDOM) ~= "table" then return false end
+        for _, widget in Internal._VDOM do
+            local class = Internal._widgets[widget.type]
+            local interactive = class and ((class.hasState and not class.hasChildren)
+                or (class.Events and class.Events.clicked))
+            if interactive and widget.Instance and widget.Instance.Parent
+                and widget.Instance:IsA("GuiObject") and widget.Instance.Visible then
+                local visible = true
+                local ancestor = widget.Instance.Parent
+                while ancestor and ancestor ~= Internal.parentInstance do
+                    if (ancestor:IsA("GuiObject") and not ancestor.Visible)
+                        or (ancestor:IsA("ScreenGui") and not ancestor.Enabled) then
+                        visible = false
+                        break
+                    end
+                    ancestor = ancestor.Parent
+                end
+                if visible then return true end
+            end
+        end
+        return false
+    end
+
+    local function createCycleCoroutine()
+        return coroutine.create(function()
+            while Internal._started do
+                local successful = 0
+                local attempted = 0
+                local lastError
+                for _, callback in Internal._connectedFunctions do
+                    if Internal._shutdown then break end
+                    attempted += 1
+                    debug.profilebegin("Iris/Connection")
+                    local status, err = xpcall(callback, debug.traceback)
+                    debug.profileend()
+                    if status and (Internal._stackIndex ~= 1 or #Internal._pushedIds ~= 0
+                        or Internal._refreshLevel ~= 1) then
+                        status = false
+                        err = "Unbalanced Rere Window/End, PushId/PopId or PushConfig/PopConfig calls."
+                    end
+                    if status then
+                        successful += 1
+                    else
+                        lastError = err
+                        Internal._ResetRenderContext()
+                        Internal._RecordRuntimeError(err)
+                    end
+                end
+                coroutine.yield(true, {successful = successful, attempted = attempted, reason = lastError})
+            end
+        end)
+    end
+    Internal._cycleCoroutine = createCycleCoroutine()
 
     local StateClass = {}
     StateClass.__index = StateClass
@@ -130,12 +229,14 @@ return function(Iris: Types.Iris): Types.Internal
         self.lastChangeTick = Iris.Internal._cycleTick
         for _, thisWidget: Types.Widget in self.ConnectedWidgets do
             if thisWidget.lastCycleTick ~= -1 then
-                Internal._widgets[thisWidget.type].UpdateState(thisWidget)
+                local ok, err = xpcall(Internal._widgets[thisWidget.type].UpdateState, debug.traceback, thisWidget)
+                if not ok then Internal._RecordRuntimeError(err) end
             end
         end
 
         for _, callback in self.ConnectedFunctions do
-            callback(newValue)
+            local ok, err = xpcall(callback, debug.traceback, newValue)
+            if not ok then Internal._RecordRuntimeError(err) end
         end
         return self.value
     end
@@ -178,7 +279,7 @@ return function(Iris: Types.Iris): Types.Internal
             for _, callback in Internal._postCycleCallbacks do
                 if Internal._shutdown then return end
                 local ok, err = xpcall(callback, debug.traceback)
-                if not ok then Internal._HandleFatalError(err); return end
+                if not ok then Internal._RecordRuntimeError(err) end
             end
         end)
         if Internal._shutdown then return end
@@ -207,26 +308,39 @@ return function(Iris: Types.Iris): Types.Internal
         if coroutineStatus == "suspended" then
             local resumed, success, result = coroutine.resume(Internal._cycleCoroutine)
             if not resumed or success == false then
-                Internal._HandleFatalError(resumed and result or success)
+                local reason = resumed and result or success
+                Internal._RecordRuntimeError(reason)
+                Internal._ResetRenderContext()
+                Internal._cycleCoroutine = createCycleCoroutine()
+                trackUnusableFrame(reason, hasUsableControls())
                 return
             end
+            if type(result) == "table" then
+                trackUnusableFrame(result.reason, result.attempted == 0 or result.successful > 0 or hasUsableControls())
+            end
         elseif coroutineStatus == "running" then
-            Internal._HandleFatalError("Iris cycleCoroutine took too long to yield. Connected functions should not yield.")
+            local reason = "Rere UI callback is still waiting. Connected functions should not yield."
+            Internal._RecordRuntimeError(reason)
+            trackUnusableFrame(reason, hasUsableControls())
             return
         else
-            Internal._HandleFatalError("Unrecoverable Rere state (coroutine status: " .. tostring(coroutineStatus) .. ")")
+            local reason = "Rere renderer needs recovery (coroutine status: " .. tostring(coroutineStatus) .. ")"
+            Internal._RecordRuntimeError(reason)
+            Internal._ResetRenderContext()
+            Internal._cycleCoroutine = createCycleCoroutine()
+            trackUnusableFrame(reason, hasUsableControls())
             return
         end
 
         if Internal._stackIndex ~= 1 then
-            Internal._stackIndex = 1
-            Internal._HandleFatalError("Too few calls to Iris.End().")
+            Internal._ResetRenderContext()
+            Internal._RecordRuntimeError("Too few calls to Iris.End().")
             return
         end
 
         if #Internal._pushedIds ~= 0 then
-            table.clear(Internal._pushedIds)
-            Internal._HandleFatalError("Too few calls to Iris.PopId().")
+            Internal._ResetRenderContext()
+            Internal._RecordRuntimeError("Too few calls to Iris.PopId().")
             return
         end
     end
@@ -234,7 +348,12 @@ return function(Iris: Types.Iris): Types.Internal
     function Internal._cycle(deltaTime: number)
         if Internal._shutdown or Internal._errored then return end
         local ok, err = xpcall(cycle, debug.traceback, deltaTime)
-        if not ok then Internal._HandleFatalError(err) end
+        if not ok then
+            Internal._ResetRenderContext()
+            Internal._RecordRuntimeError(err)
+            Internal._globalRefreshRequested = true
+            trackUnusableFrame(err, hasUsableControls())
+        end
     end
 
     function Internal._NoOp() end
