@@ -1,4 +1,5 @@
 local Types = require(script.Parent.Types)
+local CrashPopup = require(script.Parent.CrashPopup)
 
 return function(Iris: Types.Iris): Types.Internal
     local Internal = {} :: Types.Internal
@@ -47,91 +48,63 @@ return function(Iris: Types.Iris): Types.Internal
     
     Internal._errored = false
     Internal._errorReason = ""
-    Internal._copyStatusText = "📋 Copy Reason"
-    Internal._errorPosState = nil
-    Internal._errorSizeState = nil
+    Internal._runtimeErrors = {}
+    Internal._runtimeErrorTimes = {}
+    Internal._crashOptions = {}
+    Internal._crashPopup = nil
 
-    function Internal._HandleFatalError(errMessage: any)
-        if Internal._errored then return end
-        Internal._errored = true
-        Internal._errorReason = tostring(errMessage or "Unknown Rere Internal Error")
-        Internal._globalRefreshRequested = true
+    function Internal._RecordRuntimeError(errMessage: any): boolean
+        if Internal._errored then return true end
+        if Internal._shutdown then return false end
+        if not Internal._started then return false end
+        local reason = tostring(errMessage or "Unknown Rere runtime error")
+        local current = os.clock()
+        local options = Internal._crashOptions
+        local window = options.WindowSeconds or 2
+        -- Prune both signatures and the aggregate window, including alternating errors.
+        local times = Internal._runtimeErrorTimes
+        for index = #times, 1, -1 do
+            if current - times[index] > window then table.remove(times, index) end
+        end
+        table.insert(times, current)
+        for signature, entry in pairs(Internal._runtimeErrors) do
+            if current - entry.started > window then Internal._runtimeErrors[signature] = nil end
+        end
+        local entry = Internal._runtimeErrors[reason]
+        if not entry then
+            entry = {started = current, count = 0}
+            Internal._runtimeErrors[reason] = entry
+        end
+        entry.count += 1
+        if entry.count >= (options.RepeatThreshold or 3) or #times >= (options.TotalThreshold or 6) then
+            Internal._HandleFatalError(reason)
+            return true
+        end
+        return false
     end
 
-    function Internal._RenderErrorWindow()
-        local screenWidth = 800
-        local screenHeight = 600
-        if Internal.parentInstance and Internal.parentInstance:IsA("GuiBase2d") then
-            local absSize = Internal.parentInstance.AbsoluteSize
-            if absSize.X > 100 and absSize.Y > 100 then
-                screenWidth = absSize.X
-                screenHeight = absSize.Y
-            end
-        else
-            local camera = workspace.CurrentCamera
-            if camera and camera.ViewportSize.X > 100 then
-                screenWidth = camera.ViewportSize.X
-                screenHeight = camera.ViewportSize.Y
-            end
+    function Internal._HandleFatalError(errMessage: any)
+        if Internal._errored or Internal._shutdown then return end
+        Internal._errored = true
+        Internal._errorReason = tostring(errMessage or "Unknown Rere Internal Error")
+        local options = Internal._crashOptions
+        -- Capture options before consumer cleanup calls Shutdown again.
+        local shutdownOK, shutdownError = pcall(Iris.Shutdown)
+        if not shutdownOK then
+            Internal._errorReason ..= "\nShutdown error: " .. tostring(shutdownError)
         end
-
-        if not Internal._errorPosState then
-            local winW, winH = 460, 240
-            local posX = math.max(20, math.floor((screenWidth - winW) / 2))
-            local posY = math.max(20, math.floor((screenHeight - winH) / 2))
-            Internal._errorPosState = {
-                ID = "RereFatalErrorPos",
-                value = Vector2.new(posX, posY),
-                lastChangeTick = Internal._cycleTick,
-                ConnectedWidgets = {},
-                ConnectedFunctions = {},
-            }
-            setmetatable(Internal._errorPosState, Internal.StateClass)
+        if type(options.OnTerminate) == "function" then
+            local ok, err = pcall(options.OnTerminate, Internal._errorReason)
+            if not ok then Internal._errorReason ..= "\nCleanup error: " .. tostring(err) end
         end
-
-        if not Internal._errorSizeState then
-            Internal._errorSizeState = {
-                ID = "RereFatalErrorSize",
-                value = Vector2.new(460, 240),
-                lastChangeTick = Internal._cycleTick,
-                ConnectedWidgets = {},
-                ConnectedFunctions = {},
-            }
-            setmetatable(Internal._errorSizeState, Internal.StateClass)
-        end
-
-        Iris.Window({"⚠️ Rere Error Encountered", [Iris.Args.Window.NoClose] = true, [Iris.Args.Window.NoCollapse] = true}, {
-            position = Internal._errorPosState,
-            size = Internal._errorSizeState,
-        })
-            Iris.Text({"⚠️ This Rere cannot be used due to an internal error."})
-            Iris.Separator()
-            Iris.Text({"Reason:"})
-            Iris.Text({tostring(Internal._errorReason or "Unknown error")})
-            Iris.Separator()
-            Iris.SameLine()
-                if Iris.Button({Internal._copyStatusText or "📋 Copy Reason"}).clicked() then
-                    local copyFunc = (type(setclipboard) == "function" and setclipboard) or (type(toclipboard) == "function" and toclipboard)
-                    if copyFunc then
-                        copyFunc(tostring(Internal._errorReason))
-                        Internal._copyStatusText = "✅ Copied Reason!"
-                        task.delay(2, function()
-                            Internal._copyStatusText = "📋 Copy Reason"
-                        end)
-                    end
-                end
-                if Iris.Button({"❌ Exit Rere"}).clicked() then
-                    Iris.Shutdown()
-                end
-            Iris.End()
-        Iris.End()
+        Internal._crashPopup, Internal._crashCard = CrashPopup(Iris, Internal._errorReason, options)
     end
 
     Internal._cycleCoroutine = coroutine.create(function()
         while Internal._started do
             for _, callback in Internal._connectedFunctions do
                 debug.profilebegin("Iris/Connection")
-                local status, _error: string = pcall(callback)
+                local status, _error: string = xpcall(callback, debug.traceback)
                 debug.profileend()
                 if not status then
                     Internal._stackIndex = 1
@@ -181,8 +154,8 @@ return function(Iris: Types.Iris): Types.Internal
 
     Internal.StateClass = StateClass
 
-    function Internal._cycle(deltaTime: number)
-        if Iris.Disabled then
+    local function cycle(deltaTime: number)
+        if Iris.Disabled or Internal._shutdown or Internal._errored then
             return
         end
 
@@ -203,9 +176,12 @@ return function(Iris: Types.Iris): Types.Internal
 
         task.spawn(function()
             for _, callback in Internal._postCycleCallbacks do
-                callback()
+                if Internal._shutdown then return end
+                local ok, err = xpcall(callback, debug.traceback)
+                if not ok then Internal._HandleFatalError(err); return end
             end
         end)
+        if Internal._shutdown then return end
 
         if Internal._globalRefreshRequested then
             Internal._generateSelectionImageObject()
@@ -227,16 +203,11 @@ return function(Iris: Types.Iris): Types.Internal
             return
         end
 
-        if Internal._errored then
-            Internal._RenderErrorWindow()
-            return
-        end
-
         local coroutineStatus = coroutine.status(Internal._cycleCoroutine)
         if coroutineStatus == "suspended" then
-            local _, success, result = coroutine.resume(Internal._cycleCoroutine)
-            if success == false then
-                Internal._HandleFatalError(result)
+            local resumed, success, result = coroutine.resume(Internal._cycleCoroutine)
+            if not resumed or success == false then
+                Internal._HandleFatalError(resumed and result or success)
                 return
             end
         elseif coroutineStatus == "running" then
@@ -258,6 +229,12 @@ return function(Iris: Types.Iris): Types.Internal
             Internal._HandleFatalError("Too few calls to Iris.PopId().")
             return
         end
+    end
+
+    function Internal._cycle(deltaTime: number)
+        if Internal._shutdown or Internal._errored then return end
+        local ok, err = xpcall(cycle, debug.traceback, deltaTime)
+        if not ok then Internal._HandleFatalError(err) end
     end
 
     function Internal._NoOp() end

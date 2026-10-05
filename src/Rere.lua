@@ -9,6 +9,8 @@ local root = node('Iris')
 nodes['Iris'] = root
 nodes['API'] = node('API', nodes['Iris'])
 nodes['config'] = node('config', nodes['Iris'])
+nodes['CrashCards'] = node('CrashCards', nodes['Iris'])
+nodes['CrashPopup'] = node('CrashPopup', nodes['Iris'])
 nodes['demoWindow'] = node('demoWindow', nodes['Iris'])
 nodes['Internal'] = node('Internal', nodes['Iris'])
 nodes['PubTypes'] = node('PubTypes', nodes['Iris'])
@@ -2172,9 +2174,251 @@ sources[nodes['API']] = function(script)
     end
 
 end
+sources[nodes['CrashCards']] = function(script)
+    local require = requireModule
+    -- Rere beta crash cards. Kept as data so the UI can pick a fresh card per crash.
+    return {
+        {
+            art = "(x_x) oops... i crashed",
+            code = "0xBUG_TRIP",
+            detail = "i tripped over a bug and fell down.",
+            action = "restart me?",
+            restart = true,
+        },
+        {
+            art = "/\\_/\\\n( x.x )  *system.exe has stopped working*\n > ^ <",
+            code = "0xNAP_TIME",
+            detail = "",
+        },
+        {
+            art = "ERROR 404: brain not found (╥﹏╥)",
+            code = "404_BRAIN_MISSING",
+            detail = "i was trying my best, i promise.",
+        },
+        {
+            art = "(´;ω;`) something went wrong",
+            code = "0xCRY_IN_CORNER",
+            detail = "my code is crying. please be gentle.",
+            action = "send hug",
+        },
+        {
+            art = "[ crash report ]",
+            code = "0xTOO_MANY_TABS",
+            detail = "cause: 47 tabs open\nmood: dizzy (@_@)\nfix: gentle reboot + snacks",
+        },
+        {
+            art = "(•́︿•̀) uh oh...",
+            code = "503_SIT_DOWN",
+            detail = "the server needed a little sit down.",
+            action = "try again",
+            restart = true,
+        },
+        {
+            art = "∧＿∧\n( ´･ω･) i dropped everything",
+            code = "0xOOPS_BUTTERFINGERS",
+            detail = "sorry, i'm picking it all up now.",
+        },
+        {
+            art = "*poof* i vanished (๑>◡<๑)",
+            code = "0xGONE_SPARKLE",
+            detail = "i'll be back after a quick reboot.",
+            action = "reboot",
+            restart = true,
+        },
+        {
+            art = "fatal error: ran out of cuteness",
+            code = "0x00_NO_MORE_CUTE",
+            detail = "please insert 1 (one) hug to continue.",
+        },
+        {
+            art = "(>_<) ouch!",
+            code = "0xWALL_BONK",
+            detail = "i bumped into a wall.",
+            action = "rub the bruise",
+        },
+        {
+            art = "ʕ•ᴥ•ʔ  the bear fell asleep at the wheel",
+            code = "0xHIBERNATE",
+            detail = "wake me when it's spring.",
+            action = "poke gently",
+        },
+        {
+            art = "warning: heart.exe not responding ♡",
+            code = "0xTOO_MUCH_FEELINGS",
+            detail = "force quit? (please don't)",
+            action = "wait a bit",
+        },
+        {
+            art = "(ノ_<。) i tried so hard",
+            code = "0xGAVE_IT_MY_ALL",
+            detail = "the bug won this round.",
+            action = "rematch",
+            restart = true,
+        },
+        {
+            art = "~ system is taking a tiny nap ~",
+            code = "0xZZZ_503",
+            detail = "estimated wake up: soon™",
+        },
+        {
+            art = "( ˘͈ ᵕ ˘͈ ) crash.exe successful",
+            code = "0xACCIDENTAL_SUCCESS",
+            detail = "i meant to do that. (i did not.)",
+            action = "pretend nothing happened",
+        },
+    }
+
+end
+sources[nodes['CrashPopup']] = function(script)
+    local require = requireModule
+    -- This surface must survive shutting down the failed immediate-mode renderer.
+    local Cards = require(script.Parent.CrashCards)
+
+    return function(Iris, reason, options)
+        local card = Cards[Random.new():NextInteger(1, #Cards)]
+        local report = table.concat({
+            "Rere beta crash report",
+            "error code: " .. card.code,
+            "library version: " .. tostring(Iris.BetaVersion or Iris.Version),
+            "time (UTC): " .. os.date("!%Y-%m-%dT%H:%M:%SZ"),
+            "", reason,
+        }, "\n")
+        local player = game:GetService("Players").LocalPlayer
+        local parent = player and player:FindFirstChildOfClass("PlayerGui")
+        if not parent then parent = game:GetService("CoreGui") end
+        local existing = parent:FindFirstChild("RereCrashPopup")
+        if existing then existing:Destroy() end
+
+        local config = Iris.Internal._config
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "RereCrashPopup"
+        gui.ResetOnSpawn = false
+        gui.IgnoreGuiInset = true
+        gui.DisplayOrder = 1000000000
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        local panel = Instance.new("Frame")
+        panel.Name = "CrashWindow"
+        panel.AnchorPoint = Vector2.new(0.5, 0.5)
+        panel.Position = UDim2.fromScale(0.5, 0.5)
+        panel.Size = UDim2.new(1, -24, 1, -24)
+        panel.BackgroundColor3 = config.WindowBgColor or Color3.fromRGB(32, 32, 32)
+        panel.BorderSizePixel = 0
+        panel.Parent = gui
+        local constraint = Instance.new("UISizeConstraint")
+        constraint.MaxSize = Vector2.new(500, 410)
+        constraint.Parent = panel
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = config.BorderColor or Color3.fromRGB(76, 76, 76)
+        stroke.Thickness = 1
+        stroke.Parent = panel
+
+        local title = Instance.new("TextLabel")
+        title.Name = "Title"
+        title.Position = UDim2.fromOffset(0, 0)
+        title.Size = UDim2.new(1, 0, 0, 32)
+        title.BackgroundColor3 = config.TitleBgActiveColor or Color3.fromRGB(55, 55, 55)
+        title.BorderSizePixel = 0
+        title.Text = "  Rere / crash report"
+        title.TextColor3 = config.TextColor or Color3.fromRGB(240, 240, 240)
+        title.Font = Enum.Font.Code
+        title.TextSize = 14
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Parent = panel
+
+        local content = Instance.new("ScrollingFrame")
+        content.Name = "Report"
+        content.Position = UDim2.fromOffset(12, 44)
+        content.Size = UDim2.new(1, -24, 1, -104)
+        content.BackgroundTransparency = 1
+        content.BorderSizePixel = 0
+        content.ScrollBarThickness = 4
+        content.ScrollingDirection = Enum.ScrollingDirection.Y
+        content.CanvasSize = UDim2.new()
+        content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        content.Parent = panel
+        local layout = Instance.new("UIListLayout")
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Padding = UDim.new(0, 12)
+        layout.Parent = content
+        local function text(name, value, color, font)
+            local label = Instance.new("TextLabel")
+            label.Name = name
+            label.Size = UDim2.new(1, -8, 0, 0)
+            label.AutomaticSize = Enum.AutomaticSize.Y
+            label.BackgroundTransparency = 1
+            label.Font = font or Enum.Font.Code
+            label.TextSize = 14
+            label.TextColor3 = color or title.TextColor3
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.TextYAlignment = Enum.TextYAlignment.Top
+            label.TextWrapped = true
+            label.Text = value
+            label.LayoutOrder = #content:GetChildren()
+            label.Parent = content
+            return label
+        end
+        text("Art", card.art)
+        text("Code", "error code: " .. card.code, Color3.fromRGB(255, 172, 135))
+        if card.detail ~= "" then text("Detail", card.detail) end
+        text("Reason", reason, Color3.fromRGB(168, 168, 168))
+
+        local footer = Instance.new("Frame")
+        footer.Name = "Actions"
+        footer.BackgroundTransparency = 1
+        footer.Position = UDim2.new(0, 12, 1, -48)
+        footer.Size = UDim2.new(1, -24, 0, 36)
+        footer.Parent = panel
+        local buttons = Instance.new("UIListLayout")
+        buttons.SortOrder = Enum.SortOrder.LayoutOrder
+        buttons.FillDirection = Enum.FillDirection.Horizontal
+        buttons.Padding = UDim.new(0, 8)
+        buttons.Parent = footer
+        local action = options.Actions and options.Actions[card.code]
+        if not action and card.restart then action = options.OnRestart end
+        local count = type(action) == "function" and card.action and 3 or 2
+        local function button(name, caption, callback)
+            local item = Instance.new("TextButton")
+            item.Name = name
+            item.Size = UDim2.new(1 / count, -(8 * (count - 1)) / count, 1, 0)
+            item.BackgroundColor3 = config.ButtonColor or Color3.fromRGB(62, 62, 62)
+            item.BorderSizePixel = 0
+            item.Font = Enum.Font.Code
+            item.TextColor3 = title.TextColor3
+            item.TextSize = 13
+            item.TextWrapped = true
+            item.TextScaled = true
+            local textSize = Instance.new("UITextSizeConstraint")
+            textSize.MinTextSize = 8
+            textSize.MaxTextSize = 13
+            textSize.Parent = item
+            item.Text = caption
+            item.LayoutOrder = #footer:GetChildren()
+            item.Parent = footer
+            item.Activated:Connect(function() callback(item) end)
+            return item
+        end
+        button("CopyError", "copy error", function(item)
+            local copy = (type(setclipboard) == "function" and setclipboard)
+                or (type(toclipboard) == "function" and toclipboard)
+            local ok = copy and pcall(copy, report)
+            item.Text = ok and "copied!" or "clipboard unavailable"
+        end)
+        if count == 3 then
+            button("Restart", card.action, function()
+                local ok, err = pcall(action, card.code, report)
+                if ok then gui:Destroy() else text("RestartError", tostring(err)) end
+            end)
+        end
+        button("Close", "close", function() gui:Destroy() end)
+        gui.Parent = parent
+        return gui, card
+    end
+
+end
 sources[nodes['Internal']] = function(script)
     local require = requireModule
     local Types = require(script.Parent.Types)
+    local CrashPopup = require(script.Parent.CrashPopup)
 
     return function(Iris: Types.Iris): Types.Internal
         local Internal = {} :: Types.Internal
@@ -2223,91 +2467,63 @@ sources[nodes['Internal']] = function(script)
         
         Internal._errored = false
         Internal._errorReason = ""
-        Internal._copyStatusText = "📋 Copy Reason"
-        Internal._errorPosState = nil
-        Internal._errorSizeState = nil
+        Internal._runtimeErrors = {}
+        Internal._runtimeErrorTimes = {}
+        Internal._crashOptions = {}
+        Internal._crashPopup = nil
 
-        function Internal._HandleFatalError(errMessage: any)
-            if Internal._errored then return end
-            Internal._errored = true
-            Internal._errorReason = tostring(errMessage or "Unknown Rere Internal Error")
-            Internal._globalRefreshRequested = true
+        function Internal._RecordRuntimeError(errMessage: any): boolean
+            if Internal._errored then return true end
+            if Internal._shutdown then return false end
+            if not Internal._started then return false end
+            local reason = tostring(errMessage or "Unknown Rere runtime error")
+            local current = os.clock()
+            local options = Internal._crashOptions
+            local window = options.WindowSeconds or 2
+            -- Prune both signatures and the aggregate window, including alternating errors.
+            local times = Internal._runtimeErrorTimes
+            for index = #times, 1, -1 do
+                if current - times[index] > window then table.remove(times, index) end
+            end
+            table.insert(times, current)
+            for signature, entry in pairs(Internal._runtimeErrors) do
+                if current - entry.started > window then Internal._runtimeErrors[signature] = nil end
+            end
+            local entry = Internal._runtimeErrors[reason]
+            if not entry then
+                entry = {started = current, count = 0}
+                Internal._runtimeErrors[reason] = entry
+            end
+            entry.count += 1
+            if entry.count >= (options.RepeatThreshold or 3) or #times >= (options.TotalThreshold or 6) then
+                Internal._HandleFatalError(reason)
+                return true
+            end
+            return false
         end
 
-        function Internal._RenderErrorWindow()
-            local screenWidth = 800
-            local screenHeight = 600
-            if Internal.parentInstance and Internal.parentInstance:IsA("GuiBase2d") then
-                local absSize = Internal.parentInstance.AbsoluteSize
-                if absSize.X > 100 and absSize.Y > 100 then
-                    screenWidth = absSize.X
-                    screenHeight = absSize.Y
-                end
-            else
-                local camera = workspace.CurrentCamera
-                if camera and camera.ViewportSize.X > 100 then
-                    screenWidth = camera.ViewportSize.X
-                    screenHeight = camera.ViewportSize.Y
-                end
+        function Internal._HandleFatalError(errMessage: any)
+            if Internal._errored or Internal._shutdown then return end
+            Internal._errored = true
+            Internal._errorReason = tostring(errMessage or "Unknown Rere Internal Error")
+            local options = Internal._crashOptions
+            -- Capture options before consumer cleanup calls Shutdown again.
+            local shutdownOK, shutdownError = pcall(Iris.Shutdown)
+            if not shutdownOK then
+                Internal._errorReason ..= "\nShutdown error: " .. tostring(shutdownError)
             end
-
-            if not Internal._errorPosState then
-                local winW, winH = 460, 240
-                local posX = math.max(20, math.floor((screenWidth - winW) / 2))
-                local posY = math.max(20, math.floor((screenHeight - winH) / 2))
-                Internal._errorPosState = {
-                    ID = "RereFatalErrorPos",
-                    value = Vector2.new(posX, posY),
-                    lastChangeTick = Internal._cycleTick,
-                    ConnectedWidgets = {},
-                    ConnectedFunctions = {},
-                }
-                setmetatable(Internal._errorPosState, Internal.StateClass)
+            if type(options.OnTerminate) == "function" then
+                local ok, err = pcall(options.OnTerminate, Internal._errorReason)
+                if not ok then Internal._errorReason ..= "\nCleanup error: " .. tostring(err) end
             end
-
-            if not Internal._errorSizeState then
-                Internal._errorSizeState = {
-                    ID = "RereFatalErrorSize",
-                    value = Vector2.new(460, 240),
-                    lastChangeTick = Internal._cycleTick,
-                    ConnectedWidgets = {},
-                    ConnectedFunctions = {},
-                }
-                setmetatable(Internal._errorSizeState, Internal.StateClass)
-            end
-
-            Iris.Window({"⚠️ Rere Error Encountered", [Iris.Args.Window.NoClose] = true, [Iris.Args.Window.NoCollapse] = true}, {
-                position = Internal._errorPosState,
-                size = Internal._errorSizeState,
-            })
-                Iris.Text({"⚠️ This Rere cannot be used due to an internal error."})
-                Iris.Separator()
-                Iris.Text({"Reason:"})
-                Iris.Text({tostring(Internal._errorReason or "Unknown error")})
-                Iris.Separator()
-                Iris.SameLine()
-                    if Iris.Button({Internal._copyStatusText or "📋 Copy Reason"}).clicked() then
-                        local copyFunc = (type(setclipboard) == "function" and setclipboard) or (type(toclipboard) == "function" and toclipboard)
-                        if copyFunc then
-                            copyFunc(tostring(Internal._errorReason))
-                            Internal._copyStatusText = "✅ Copied Reason!"
-                            task.delay(2, function()
-                                Internal._copyStatusText = "📋 Copy Reason"
-                            end)
-                        end
-                    end
-                    if Iris.Button({"❌ Exit Rere"}).clicked() then
-                        Iris.Shutdown()
-                    end
-                Iris.End()
-            Iris.End()
+            Internal._crashPopup, Internal._crashCard = CrashPopup(Iris, Internal._errorReason, options)
         end
 
         Internal._cycleCoroutine = coroutine.create(function()
             while Internal._started do
                 for _, callback in Internal._connectedFunctions do
                     debug.profilebegin("Iris/Connection")
-                    local status, _error: string = pcall(callback)
+                    local status, _error: string = xpcall(callback, debug.traceback)
                     debug.profileend()
                     if not status then
                         Internal._stackIndex = 1
@@ -2357,8 +2573,8 @@ sources[nodes['Internal']] = function(script)
 
         Internal.StateClass = StateClass
 
-        function Internal._cycle(deltaTime: number)
-            if Iris.Disabled then
+        local function cycle(deltaTime: number)
+            if Iris.Disabled or Internal._shutdown or Internal._errored then
                 return
             end
 
@@ -2379,9 +2595,12 @@ sources[nodes['Internal']] = function(script)
 
             task.spawn(function()
                 for _, callback in Internal._postCycleCallbacks do
-                    callback()
+                    if Internal._shutdown then return end
+                    local ok, err = xpcall(callback, debug.traceback)
+                    if not ok then Internal._HandleFatalError(err); return end
                 end
             end)
+            if Internal._shutdown then return end
 
             if Internal._globalRefreshRequested then
                 Internal._generateSelectionImageObject()
@@ -2403,16 +2622,11 @@ sources[nodes['Internal']] = function(script)
                 return
             end
 
-            if Internal._errored then
-                Internal._RenderErrorWindow()
-                return
-            end
-
             local coroutineStatus = coroutine.status(Internal._cycleCoroutine)
             if coroutineStatus == "suspended" then
-                local _, success, result = coroutine.resume(Internal._cycleCoroutine)
-                if success == false then
-                    Internal._HandleFatalError(result)
+                local resumed, success, result = coroutine.resume(Internal._cycleCoroutine)
+                if not resumed or success == false then
+                    Internal._HandleFatalError(resumed and result or success)
                     return
                 end
             elseif coroutineStatus == "running" then
@@ -2434,6 +2648,12 @@ sources[nodes['Internal']] = function(script)
                 Internal._HandleFatalError("Too few calls to Iris.PopId().")
                 return
             end
+        end
+
+        function Internal._cycle(deltaTime: number)
+            if Internal._shutdown or Internal._errored then return end
+            local ok, err = xpcall(cycle, debug.traceback, deltaTime)
+            if not ok then Internal._HandleFatalError(err) end
         end
 
         function Internal._NoOp() end
@@ -3533,6 +3753,10 @@ sources[nodes['Types']] = function(script)
 
         Init: (parentInstance: BasePlayerGui | GuiBase2d?, eventConnection: (RBXScriptSignal | (() -> number) | false)?, allowMultipleInits: boolean?) -> Iris,
         Shutdown: () -> (),
+        ConfigureCrashHandler: (options: {[string]: any}?) -> (),
+        ReportError: (errMessage: any) -> boolean,
+        ShowFatalError: (errMessage: any) -> (),
+        DismissCrash: () -> (),
         Connect: (self: Iris, callback: () -> ()) -> () -> (),
         Append: (userInstance: GuiObject) -> (),
         ForceRefresh: () -> (),
@@ -6423,6 +6647,21 @@ sources[nodes['Iris']] = function(script)
     function Iris.ShowFatalError(errMessage: any)
         Internal._HandleFatalError(errMessage)
     end
+    function Iris.ConfigureCrashHandler(options)
+        options = options or {}
+        for _, name in {"WindowSeconds", "RepeatThreshold", "TotalThreshold"} do
+            if options[name] ~= nil then
+                assert(type(options[name]) == "number" and options[name] > 0, name .. " must be positive")
+            end
+        end
+        Internal._crashOptions = options
+    end
+    function Iris.ReportError(errMessage: any): boolean
+        return Internal._RecordRuntimeError(errMessage)
+    end
+    function Iris.DismissCrash()
+        if Internal._crashPopup then Internal._crashPopup:Destroy(); Internal._crashPopup = nil end
+    end
     local function isGuiParent(container: unknown): boolean
         if typeof(container) ~= "Instance" then
             return false
@@ -6538,6 +6777,7 @@ sources[nodes['Iris']] = function(script)
 
         -- spawns the connection to call `Internal._cycle()` within.
         task.spawn(function()
+            if not Internal._started then return end
             if typeof(eventConnection) == "function" then
                 while Internal._started do
                     local deltaTime = eventConnection()
@@ -6560,28 +6800,42 @@ sources[nodes['Iris']] = function(script)
         Shuts Iris down. This can only be called once, and Iris cannot be started once shut down.
     ]=]
     function Iris.Shutdown()
-        Internal._keybinds.Cleanup()
+        if Internal._shutdown then return end
         Internal._started = false
         Internal._shutdown = true
+        if Internal._keybinds then pcall(Internal._keybinds.Cleanup) end
 
         if Internal._eventConnection then
-            Internal._eventConnection:Disconnect()
+            pcall(function() Internal._eventConnection:Disconnect() end)
         end
         Internal._eventConnection = nil
 
-        if Internal._rootWidget then
-            if Internal._rootWidget.Instance then
-                Internal._widgets["Root"].Discard(Internal._rootWidget)
-            end
-            Internal._rootInstance = nil
-        end
-
-        if Internal.SelectionImageObject then
-            Internal.SelectionImageObject:Destroy()
-        end
-
         for _, connection in Internal._connections do
-            connection:Disconnect()
+            pcall(function() connection:Disconnect() end)
+        end
+        table.clear(Internal._connections)
+        table.clear(Internal._connectedFunctions)
+        table.clear(Internal._postCycleCallbacks)
+        local discarded = {}
+        for _, vdom in {Internal._VDOM, Internal._lastVDOM} do
+            for _, widget in vdom do
+                if widget.type ~= "Root" and not discarded[widget] then
+                    discarded[widget] = true
+                    widget.lastCycleTick = -1
+                    pcall(Internal._widgets[widget.type].Discard, widget)
+                end
+            end
+        end
+        for _, state in Internal._states do
+            table.clear(state.ConnectedWidgets)
+            table.clear(state.ConnectedFunctions)
+        end
+        if Internal._rootInstance then pcall(function() Internal._rootInstance:Destroy() end) end
+        Internal._rootInstance = nil
+        if Internal._rootWidget then Internal._rootWidget.Instance = nil end
+        if Internal.SelectionImageObject then pcall(function() Internal.SelectionImageObject:Destroy() end) end
+        if Internal._cycleCoroutine and coroutine.status(Internal._cycleCoroutine) == "suspended" then
+            pcall(coroutine.close, Internal._cycleCoroutine)
         end
     end
 
@@ -13086,17 +13340,33 @@ sources[nodes['widgets/Toggle']] = function(script)
                 if widget.state.keybind == nil then widget.state.keybind = Iris._widgetState(widget, "keybind", "None") end
             end,
             Update = function(widget)
-                widget.Instance.ToggleButton.TextLabel.Text = widget.arguments.Text or "Toggle"
+                local instance = rawget(widget, "Instance")
+                if not instance or not instance.Parent then return end
+                local toggleButton = instance:FindFirstChild("ToggleButton")
+                if not toggleButton then return end
+                local label = toggleButton:FindFirstChild("TextLabel")
+                if label then label.Text = widget.arguments.Text or "Toggle" end
                 local states = rawget(widget, "state")
                 if states then
                     local checked = states.isChecked
                     local entry = manager.Register(states.keybind, function() checked:set(not checked.value) end, widget.arguments.Text or "Toggle")
-                    entry.buttons[widget.Instance.Keybind] = true
+                    local keybindButton = rawget(widget, "KeybindButton") or instance:FindFirstChild("Keybind")
+                    if keybindButton and keybindButton.Parent == instance then
+                        widget.KeybindButton = keybindButton
+                        entry.buttons[keybindButton] = true
+                    end
                 end
             end,
             UpdateState = function(widget)
+                local instance = rawget(widget, "Instance")
+                if not instance or not instance.Parent then return end
+                local toggleButton = instance:FindFirstChild("ToggleButton")
+                local box = toggleButton and toggleButton:FindFirstChild("Box")
+                local checkmark = box and box:FindFirstChild("Checkmark")
                 local checked = widget.state.isChecked.value
-                widget.Instance.ToggleButton.Box.Checkmark.ImageTransparency = checked and Iris._config.CheckMarkTransparency or 1
+                if checkmark then
+                    checkmark.ImageTransparency = checked and Iris._config.CheckMarkTransparency or 1
+                end
                 if widget.previousChecked ~= checked then
                     widget.previousChecked = checked
                     if checked then widget.lastCheckedTick = Iris._cycleTick + 1 else widget.lastUncheckedTick = Iris._cycleTick + 1 end
@@ -13105,8 +13375,12 @@ sources[nodes['widgets/Toggle']] = function(script)
                 if widget.previousKeybind ~= key then widget.previousKeybind = key; widget.lastKeybindTick = Iris._cycleTick + 1 end
                 local checkedState = widget.state.isChecked
                 local entry = manager.Register(widget.state.keybind, function() checkedState:set(not checkedState.value) end, widget.arguments.Text or "Toggle")
-                entry.buttons[widget.Instance.Keybind] = true
-                widget.Instance.Keybind.Text = manager.capture == entry.id and "..." or tostring(key)
+                local keybindButton = rawget(widget, "KeybindButton") or instance:FindFirstChild("Keybind")
+                if keybindButton and keybindButton.Parent == instance then
+                    widget.KeybindButton = keybindButton
+                    entry.buttons[keybindButton] = true
+                    keybindButton.Text = manager.capture == entry.id and "..." or tostring(key)
+                end
             end,
             Discard = function(widget)
                 local states = rawget(widget, "state")
@@ -15257,5 +15531,5 @@ sources[nodes['widgets']] = function(script)
 
 end
 local RereBeta = requireModule(nodes['Iris'])
-RereBeta.BetaVersion = "20261004005"
+RereBeta.BetaVersion = "20261005001"
 return RereBeta

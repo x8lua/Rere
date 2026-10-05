@@ -16,6 +16,11 @@ Native `Rere.Toggle({"Feature"}, {isChecked = enabled, keybind = key})` includes
 left-side keybind button, keyboard activation, and duplicate-key confirmation.
 See [the keybind toggle guide](docs/keybind-toggles.md).
 
+Beta instances stop on fatal UI errors and display a random crash card with a
+copyable report. External callback error bursts can use `Rere.ReportError`.
+See [the crash handler guide](docs/crash-handler.md) and the
+[15 crash cards](lib/CrashCards.lua).
+
 `Rere.Section({"Movement"})` adds a plain, non-collapsible heading to beta tab
 section navigation. See [the section guide](docs/sections.md).
 

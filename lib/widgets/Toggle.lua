@@ -78,17 +78,33 @@ return function(Iris, widgets)
             if widget.state.keybind == nil then widget.state.keybind = Iris._widgetState(widget, "keybind", "None") end
         end,
         Update = function(widget)
-            widget.Instance.ToggleButton.TextLabel.Text = widget.arguments.Text or "Toggle"
+            local instance = rawget(widget, "Instance")
+            if not instance or not instance.Parent then return end
+            local toggleButton = instance:FindFirstChild("ToggleButton")
+            if not toggleButton then return end
+            local label = toggleButton:FindFirstChild("TextLabel")
+            if label then label.Text = widget.arguments.Text or "Toggle" end
             local states = rawget(widget, "state")
             if states then
                 local checked = states.isChecked
                 local entry = manager.Register(states.keybind, function() checked:set(not checked.value) end, widget.arguments.Text or "Toggle")
-                entry.buttons[widget.Instance.Keybind] = true
+                local keybindButton = rawget(widget, "KeybindButton") or instance:FindFirstChild("Keybind")
+                if keybindButton and keybindButton.Parent == instance then
+                    widget.KeybindButton = keybindButton
+                    entry.buttons[keybindButton] = true
+                end
             end
         end,
         UpdateState = function(widget)
+            local instance = rawget(widget, "Instance")
+            if not instance or not instance.Parent then return end
+            local toggleButton = instance:FindFirstChild("ToggleButton")
+            local box = toggleButton and toggleButton:FindFirstChild("Box")
+            local checkmark = box and box:FindFirstChild("Checkmark")
             local checked = widget.state.isChecked.value
-            widget.Instance.ToggleButton.Box.Checkmark.ImageTransparency = checked and Iris._config.CheckMarkTransparency or 1
+            if checkmark then
+                checkmark.ImageTransparency = checked and Iris._config.CheckMarkTransparency or 1
+            end
             if widget.previousChecked ~= checked then
                 widget.previousChecked = checked
                 if checked then widget.lastCheckedTick = Iris._cycleTick + 1 else widget.lastUncheckedTick = Iris._cycleTick + 1 end
@@ -97,8 +113,12 @@ return function(Iris, widgets)
             if widget.previousKeybind ~= key then widget.previousKeybind = key; widget.lastKeybindTick = Iris._cycleTick + 1 end
             local checkedState = widget.state.isChecked
             local entry = manager.Register(widget.state.keybind, function() checkedState:set(not checkedState.value) end, widget.arguments.Text or "Toggle")
-            entry.buttons[widget.Instance.Keybind] = true
-            widget.Instance.Keybind.Text = manager.capture == entry.id and "..." or tostring(key)
+            local keybindButton = rawget(widget, "KeybindButton") or instance:FindFirstChild("Keybind")
+            if keybindButton and keybindButton.Parent == instance then
+                widget.KeybindButton = keybindButton
+                entry.buttons[keybindButton] = true
+                keybindButton.Text = manager.capture == entry.id and "..." or tostring(key)
+            end
         end,
         Discard = function(widget)
             local states = rawget(widget, "state")

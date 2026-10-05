@@ -641,6 +641,10 @@ export type Iris = {
 
     Init: (parentInstance: BasePlayerGui | GuiBase2d?, eventConnection: (RBXScriptSignal | (() -> number) | false)?, allowMultipleInits: boolean?) -> Iris,
     Shutdown: () -> (),
+    ConfigureCrashHandler: (options: {[string]: any}?) -> (),
+    ReportError: (errMessage: any) -> boolean,
+    ShowFatalError: (errMessage: any) -> (),
+    DismissCrash: () -> (),
     Connect: (self: Iris, callback: () -> ()) -> () -> (),
     Append: (userInstance: GuiObject) -> (),
     ForceRefresh: () -> (),

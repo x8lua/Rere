@@ -32,6 +32,21 @@ end
 function Iris.ShowFatalError(errMessage: any)
     Internal._HandleFatalError(errMessage)
 end
+function Iris.ConfigureCrashHandler(options)
+    options = options or {}
+    for _, name in {"WindowSeconds", "RepeatThreshold", "TotalThreshold"} do
+        if options[name] ~= nil then
+            assert(type(options[name]) == "number" and options[name] > 0, name .. " must be positive")
+        end
+    end
+    Internal._crashOptions = options
+end
+function Iris.ReportError(errMessage: any): boolean
+    return Internal._RecordRuntimeError(errMessage)
+end
+function Iris.DismissCrash()
+    if Internal._crashPopup then Internal._crashPopup:Destroy(); Internal._crashPopup = nil end
+end
 local function isGuiParent(container: unknown): boolean
     if typeof(container) ~= "Instance" then
         return false
@@ -147,6 +162,7 @@ function Iris.Init(parentInstance: BasePlayerGui | GuiBase2d?, eventConnection: 
 
     -- spawns the connection to call `Internal._cycle()` within.
     task.spawn(function()
+        if not Internal._started then return end
         if typeof(eventConnection) == "function" then
             while Internal._started do
                 local deltaTime = eventConnection()
@@ -169,28 +185,42 @@ end
     Shuts Iris down. This can only be called once, and Iris cannot be started once shut down.
 ]=]
 function Iris.Shutdown()
-    Internal._keybinds.Cleanup()
+    if Internal._shutdown then return end
     Internal._started = false
     Internal._shutdown = true
+    if Internal._keybinds then pcall(Internal._keybinds.Cleanup) end
 
     if Internal._eventConnection then
-        Internal._eventConnection:Disconnect()
+        pcall(function() Internal._eventConnection:Disconnect() end)
     end
     Internal._eventConnection = nil
 
-    if Internal._rootWidget then
-        if Internal._rootWidget.Instance then
-            Internal._widgets["Root"].Discard(Internal._rootWidget)
-        end
-        Internal._rootInstance = nil
-    end
-
-    if Internal.SelectionImageObject then
-        Internal.SelectionImageObject:Destroy()
-    end
-
     for _, connection in Internal._connections do
-        connection:Disconnect()
+        pcall(function() connection:Disconnect() end)
+    end
+    table.clear(Internal._connections)
+    table.clear(Internal._connectedFunctions)
+    table.clear(Internal._postCycleCallbacks)
+    local discarded = {}
+    for _, vdom in {Internal._VDOM, Internal._lastVDOM} do
+        for _, widget in vdom do
+            if widget.type ~= "Root" and not discarded[widget] then
+                discarded[widget] = true
+                widget.lastCycleTick = -1
+                pcall(Internal._widgets[widget.type].Discard, widget)
+            end
+        end
+    end
+    for _, state in Internal._states do
+        table.clear(state.ConnectedWidgets)
+        table.clear(state.ConnectedFunctions)
+    end
+    if Internal._rootInstance then pcall(function() Internal._rootInstance:Destroy() end) end
+    Internal._rootInstance = nil
+    if Internal._rootWidget then Internal._rootWidget.Instance = nil end
+    if Internal.SelectionImageObject then pcall(function() Internal.SelectionImageObject:Destroy() end) end
+    if Internal._cycleCoroutine and coroutine.status(Internal._cycleCoroutine) == "suspended" then
+        pcall(coroutine.close, Internal._cycleCoroutine)
     end
 end
 
