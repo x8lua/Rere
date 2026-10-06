@@ -77,7 +77,9 @@ return function(Iris: Types.Internal)
 
     function widgets.getScreenSizeForWindow(thisWidget: Types.Widget) -- possible parents are GuiBase2d, CoreGui, PlayerGui
         if thisWidget.Instance:IsA("GuiBase2d") then
-            return thisWidget.Instance.AbsoluteSize
+            local size = thisWidget.Instance.AbsoluteSize
+            if size.X > 0 and size.Y > 0 then return size end
+            return workspace.CurrentCamera.ViewportSize
         else
             local rootParent = thisWidget.Instance.Parent
             if rootParent:IsA("GuiBase2d") then

@@ -19,6 +19,18 @@ Edit `lib/widgets/Tab.lua`, then run `node tools/build-executor.mjs` to generate
 `src/Rere.lua` and `src/rere-beta.lua`. The source LarpKuran copy remains a separate local
 artifact.
 
+## Mobile Window Placement
+
+`BetaVersion = 20261006001` fits the intended window size before placing it,
+centers new touch windows, and recalculates bounds when the viewport changes.
+This avoids checking a new window's `AbsoluteSize` while it is still zero.
+Windows with `OutOfBounds = true` retain their unrestricted placement.
+
+Touch dragging starts on the title bar and tracks the initiating finger through
+`InputChanged` and `TouchMoved`. Releasing that finger or losing app focus clears
+the gesture; a second finger does not take over the drag. Resize grips use the
+same ownership rule. Mobile device interaction still needs a live device check.
+
 ## 右側懸浮 section 導覽
 
 `BetaVersion = 20261002005`：目前分頁直屬的 `CollapsingHeader` 自動成為 section 捷徑。
