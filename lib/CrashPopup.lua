@@ -13,8 +13,8 @@ return function(Iris, reason, options, notice)
         "", reason,
     }, "\n")
     local player = game:GetService("Players").LocalPlayer
-    local parent = player and player:FindFirstChildOfClass("PlayerGui")
-    if not parent then parent = game:GetService("CoreGui") end
+    local parent = player and (player:FindFirstChildOfClass("PlayerGui") or player:WaitForChild("PlayerGui", 10))
+    if not parent then return nil end
     local name = critical and "RereCrashPopup" or "RereErrorNotice"
     local existing = parent:FindFirstChild(name)
     if existing then existing:Destroy() end
