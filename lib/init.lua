@@ -32,45 +32,32 @@ end
 function Iris.ShowFatalError(errMessage: any)
     Internal._HandleFatalError(errMessage)
 end
+local function getPlayerGui(): BasePlayerGui?
+    local players = game:GetService("Players")
+    local player = players.LocalPlayer
+    if not player then return nil end
+    return player:FindFirstChildOfClass("PlayerGui") or player:WaitForChild("PlayerGui", 10)
+end
+
 local function isGuiParent(container: unknown): boolean
     if typeof(container) ~= "Instance" then
         return false
     end
 
     local ok, compatible = pcall(function()
-        return container:IsA("GuiBase2d") or container:IsA("BasePlayerGui")
+        if not (container:IsA("GuiBase2d") or container:IsA("BasePlayerGui")) then
+            return false
+        end
+        local playerGui = getPlayerGui()
+        if not playerGui then return false end
+        return container == playerGui or container:IsDescendantOf(playerGui)
     end)
     return ok and compatible
 end
 
 local function resolveExecutorParent(): BasePlayerGui | GuiBase2d
-    for _, getContainer in {
-        function()
-            if type(gethui) == "function" then
-                return gethui()
-            end
-        end,
-        function()
-            if type(get_hidden_gui) == "function" then
-                return get_hidden_gui()
-            end
-        end,
-    } do
-        local ok, container = pcall(getContainer)
-        if ok and isGuiParent(container) then
-            return container
-        end
-    end
-
-    local ok, coreGui = pcall(function()
-        return game:GetService("CoreGui")
-    end)
-    if ok and isGuiParent(coreGui) then
-        return coreGui
-    end
-
-    local playerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-    assert(isGuiParent(playerGui), "Rere: could not resolve a GUI-capable parent")
+    local playerGui = getPlayerGui()
+    assert(playerGui and isGuiParent(playerGui), "Rere: PlayerGui is unavailable")
     return playerGui
 end
 
@@ -129,6 +116,7 @@ function Iris.Init(parentInstance: BasePlayerGui | GuiBase2d?, eventConnection: 
     end
 
     if not isGuiParent(parentInstance) then
+        -- Never mount into CoreGui or executor hidden GUI; keep Rere under the local PlayerGui.
         parentInstance = resolveExecutorParent()
     end
     if eventConnection == nil then
